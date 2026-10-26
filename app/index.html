@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>文本乱码清理 Agent</title>
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>文本乱码清理 Agent</h1>
+    <p>基于大模型 API，智能识别并清理编程题平台复制产生的乱码文本</p>
+  </header>
+
+  <div class="nav-bar">
+    <a class="active" href="index.html">文本乱码清理</a>
+    <a href="code-template.html">代码模板生成</a>
+    <a href="solution.html">题解代码生成</a>
+    <a href="convert.html">代码语言转换</a>
+    <a href="explanation.html">题解说明生成</a>
+    <a href="csdn.html">CSDN 发布</a>
+    <a href="style.html">风格学习</a>
+    <a href="memory.html">记忆中心</a>
+    <button class="nav-settings" onclick="openSettings()" title="API 设置">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+
+
+  <div class="card">
+    <div class="card-title collapsible collapsed" onclick="toggleCollapse(this, 'promptArea')">系统提示词（点击展开/折叠）</div>
+    <div id="promptArea" class="collapse-content collapsed">
+      <textarea id="systemPrompt" style="min-height: 120px; font-size: 13px;"></textarea>
+      <div class="btn-group" style="margin-top:8px;">
+        <button class="btn btn-secondary" onclick="resetPrompt('tc_prompt')">恢复默认</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">1</span>原始文本</div>
+    <textarea id="inputText" placeholder="在此粘贴需要清理的乱码文本..."></textarea>
+    <div class="btn-group">
+      <button class="btn btn-secondary" onclick="loadDemo()">加载示例</button>
+      <button class="btn btn-secondary" onclick="clearInputValue('inputText', '输入内容')">删除输入内容</button>
+    </div>
+    <div class="stats">
+      <span class="stat-badge" id="inputStats">输入 0 字符</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="btn-group" style="margin-bottom:16px;">
+      <button class="btn btn-primary" id="cleanBtn" onclick="cleanText()">
+        <span id="btnText">一键清理</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">2</span>清理结果</div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('rendered')">渲染预览</button>
+      <button class="tab" onclick="switchTab('source')">Markdown 源码</button>
+    </div>
+    <div class="level-filter hidden" id="levelFilter">
+      <span class="lf-label">按标题层级展示</span>
+      <button class="lf-btn active" data-level="0" onclick="setLevelFilter(0, this)">全部</button>
+      <button class="lf-btn" data-level="1" onclick="setLevelFilter(1, this)">仅一级标题</button>
+      <button class="lf-btn" data-level="2" onclick="setLevelFilter(2, this)">到二级</button>
+      <button class="lf-btn" data-level="3" onclick="setLevelFilter(3, this)">到三级</button>
+    </div>
+    <div id="renderedOutput" class="output-area">
+      <div class="empty-state">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+        <div class="empty-title">清理结果将显示在这里</div>
+        <div class="empty-hint">粘贴文本并点击「一键清理」</div>
+      </div>
+    </div>
+    <textarea id="sourceOutput" class="output-area source-view hidden" readonly style="min-height:240px;" placeholder="Markdown 源码将显示在这里"></textarea>
+    <div class="btn-group" style="margin-top:12px;">
+      <button class="btn btn-secondary" onclick="copyResult()">复制 Markdown</button>
+      <button class="btn btn-secondary" onclick="copyRendered()">复制渲染结果（粘贴到飞书）</button>
+      <button class="btn btn-secondary" onclick="downloadResult()">下载 .md</button>
+      <button class="btn btn-danger" style="margin-left:auto;" onclick="clearAllCache()">清空全部缓存</button>
+    </div>
+    <div class="stats">
+      <span class="stat-badge" id="outputStats">输出 0 字符</span>
+      <span class="stat-badge" id="reduceStats">缩减 0%</span>
+    </div>
+  </div>
+</div>
+
+
+<div class="settings-overlay hidden" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+  <div class="settings-panel">
+    <div class="settings-header">
+      <span>API 设置</span>
+      <button class="settings-close" onclick="closeSettings()" title="关闭">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="warning-box">API Key 可留空：留空时自动使用服务器内置 Key，打开即用。填写自己的 Key 则仅存储在浏览器本地，直连失败时自动改经本服务器同源中转转发（服务器不存储你的 Key）。所有功能页面共享此配置，只需设置一次。</div>
+    <div class="field">
+      <label>API Key</label>
+      <input type="password" id="cfgApiKey" placeholder="留空则使用服务器内置 Key" autocomplete="off">
+      <small>留空 = 使用服务器内置 Key（推荐）；自带 Key 时才会用到下方 Base URL 直连</small>
+    </div>
+    <div class="field">
+      <label>Base URL</label>
+      <input type="text" id="cfgBaseUrl" placeholder="https://api.moonshot.cn/v1" value="https://api.moonshot.cn/v1">
+    </div>
+    <div class="field">
+      <label>模型</label>
+      <input type="text" id="cfgModel" placeholder="kimi-k2.6" value="kimi-k2.6">
+    </div>
+    <div class="field">
+      <label>Temperature</label>
+      <input type="number" id="cfgTemperature" placeholder="0.6" value="0.6" min="0" max="2" step="0.1">
+      <small>kimi-k2.6 非思考模式必须设为 0.6，否则 API 报错</small>
+    </div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="cfgDisableThinking" checked style="width:auto;"> 关闭模型思考（显著提速，推荐）</label>
+      <small>思考型模型（如 kimi-k2.6）推理耗时很长，可能超时或耗尽输出预算；关闭后响应更快更稳。若所用端点不支持该参数会自动回退，不影响使用。</small>
+    </div>
+    <div class="field">
+      <label>同步密钥（可选）</label>
+      <input type="password" id="cfgSyncToken" placeholder="服务器设置了 SYNC_TOKEN 时填写" autocomplete="off">
+      <small>仅用于 API 中转鉴权（服务器设了 SYNC_TOKEN 时填写）；风格数据同步免密，无需为此填写</small>
+    </div>
+    <div class="btn-group" style="margin-top:4px;">
+      <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
+      <button class="btn btn-secondary" onclick="testConnection()">测试连接</button>
+      <button class="btn btn-secondary" onclick="loadSettings()">恢复已保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">已复制到剪贴板</div>
+
+<script src="common.js"></script>
+<script>
+const DEFAULT_PROMPT = `你是一位专业的文本清理专家。你的任务是将从编程题平台（如 LeetCode、力扣）复制出来的乱码文本清理为规范、可读的中文 Markdown 格式。
+
+## 清理规则
+
+### 1. 去除重复与乱码
+- 去除因复制产生的文本重复，例如：
+  - "n nn" -> "n"
+  - "0 00" -> "0"
+  - "n - 1 n-1n-1" -> "n-1"
+  - "t i l e s tilestiles" -> "tiles"
+  - "tiles[i] = 0 tiles[i] = 0tiles[i]=0" -> "tiles[i] = 0"
+  - "\\ge n-1>=n-1" -> ">= n-1"
+  - "1 \\le n \\le 10000 1\\le n\\le 100001<=n<=10000" -> "1 <= n <= 10000"
+- 去除平台水印，如 "AI写代码" 及其后的数字
+- 去除多余的空格和空行
+
+### 2. 代码格式规范
+所有数字、变量名、数组索引、数学表达式、代码片段必须用反引号包裹，例如：
+- \`n\`、 \`n-1\`、 \`tiles\`、 \`tiles[i]\`、 \`0\`、 \`1\`、 \`-1\`
+- \`>= n-1\`、 \`1 <= n <= 10000\`
+- 移动步数如 \`1\` 格、 \`2\` 格
+- 坐标如坐标 \`0\`、坐标 \`3\`
+
+但普通中文数字（如"第一步"、"第二步"中的数字）不需要包裹，除非它们表示具体的代码值。
+
+### 3. 标题格式规范
+- 以下关键词所在行必须作为 Markdown 一级标题（"# "）输出：题目内容、输入描述、输出描述
+- "示例一"、"示例二"、"样例1"、"样例2" 等具体样例的标题必须作为二级标题（"## "）输出
+- 每个样例内部的 "输入"、"输出"、"说明"、"解释" 等关键词所在行必须作为三级标题（"### "）输出
+
+### 4. 保持结构
+- 保留原文的段落结构和逻辑顺序
+- 保留"说明"、"解释"等辅助性文字
+- 保留输入输出示例的格式，但去除乱码重复
+
+### 5. 输出格式
+- 仅输出清理后的 Markdown 文本
+- 不要添加任何解释、总结或额外内容
+- 不要输出 markdown 代码块包裹，直接输出纯 Markdown`;
+
+const DEMO_TEXT = `题目内容
+在一条长度为 n nn 的直线跑道上，每个格子的坐标从 0 00 到 n − 1 n-1n−1，每个格子上写着一个整数，存放在数组 t i l e s tilestiles 中。这些数字有特殊含义：
+
+t i l e s [ i ] = 0 tiles[i] = 0tiles[i]=0，代表这是普通空地，可以通过；
+t i l e s [ i ] = 1 tiles[i] = 1tiles[i]=1，代表这是弹簧加速垫；
+t i l e s [ i ] = − 1 tiles[i] = -1tiles[i]=−1，代表这是陷阱。
+你控制的角色从坐标 0 00 出发，目标是成功到达或越过终点坐标 n − 1 n-1n−1（即坐标 ≥ n − 1 \\ge n-1≥n−1 即算通关）。
+
+角色移动规则：默认情况下，角色每一步只能向右移动 1 11 格。如果角色踩到弹簧加速垫（1 11），那么下一步可以向右移动 2 22 格。如果角色踩到陷阱（− 1 -1−1），游戏结束。
+
+输入描述
+给定一个整数数组 t i l e s tilestiles，长度为 n nn，其中 1 ≤ n ≤ 10000 1 \\le n \\le 100001≤n≤10000。数组中的元素取值为 0 00、1 11 或 − 1 -1−1。
+
+输出描述
+如果角色从坐标 0 00 出发能够成功通关（到达或越过坐标 n − 1 n-1n−1），返回通关所需的步数；否则返回 − 1 -1−1。
+
+样例1
+输入
+
+0,1,-1,0,0
+AI写代码
+1
+输出
+
+3
+AI写代码
+1
+说明
+初始在坐标 0 00，当前格子是 0 00（普通空地）。
+
+第 1 11 步：移动 1 11 格，来到坐标 1 11，当前格子是 1 11（弹簧垫）。
+第 2 22 步：因为踩到弹簧，这步移动 2 22 格，来到坐标 3 33（成功越过了坐标 2 22 的陷阱），当前格子是 0 00。
+第 3 33 步：移动 1 11 格，来到坐标 4 44，检查：到达了坐标 4 44（等于 n − 1 n-1n−1），成功通关。`;
+
+function init() {
+  $('systemPrompt').value = localStorage.getItem('tc_prompt') || DEFAULT_PROMPT;
+  persistPromptOnInput('tc_prompt');
+  // 恢复上次输入与清理结果（页面跳转不丢失）
+  const cachedInput = localStorage.getItem('tc_input');
+  if (cachedInput) $('inputText').value = cachedInput;
+  const cachedResult = localStorage.getItem('tc_result');
+  if (cachedResult) {
+    showResult(cachedResult);
+    $('outputStats').textContent = '输出 ' + cachedResult.length + ' 字符';
+    if (cachedInput && cachedInput.length) {
+      $('reduceStats').textContent = '缩减 ' + Math.round((1 - cachedResult.length / cachedInput.length) * 100) + '%';
+    }
+  }
+  updateInputStats();
+}
+
+
+function loadDemo() {
+  $('inputText').value = DEMO_TEXT;
+  updateInputStats();
+}
+
+function clearInput() {
+  $('inputText').value = '';
+  localStorage.removeItem('tc_input');
+  updateInputStats();
+}
+
+// 清空本页所有缓存（原始文本 + 清理结果），用于开始新一道题目
+function clearAllCache() {
+  const hasData = localStorage.getItem('tc_input') || localStorage.getItem('tc_result')
+    || $('inputText').value.trim();
+  if (hasData && !confirm('确定要清空全部缓存吗？\n将删除本页保存的原始文本和清理结果，此操作不可恢复。')) return;
+  localStorage.removeItem('tc_input');
+  localStorage.removeItem('tc_result');
+  $('inputText').value = '';
+  $('sourceOutput').value = '';
+  $('renderedOutput').innerHTML = '<div class="empty-state">'
+    + '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>'
+    + '<div class="empty-title">清理结果将显示在这里</div>'
+    + '<div class="empty-hint">粘贴文本并点击「一键清理」</div></div>';
+  $('levelFilter').classList.add('hidden');
+  $('outputStats').textContent = '输出 0 字符';
+  $('reduceStats').textContent = '缩减 0%';
+  updateInputStats();
+  showToast('缓存已清空，可以开始新的题目');
+}
+
+function updateInputStats() {
+  $('inputStats').textContent = '输入 ' + $('inputText').value.length + ' 字符';
+}
+
+$('inputText').addEventListener('input', () => {
+  localStorage.setItem('tc_input', $('inputText').value);
+  updateInputStats();
+});
+
+function switchTab(mode) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  if (mode === 'rendered') {
+    $('renderedOutput').classList.remove('hidden');
+    $('sourceOutput').classList.add('hidden');
+  } else {
+    $('renderedOutput').classList.add('hidden');
+    $('sourceOutput').classList.remove('hidden');
+  }
+}
+
+/* ===== 标题层级筛选 ===== */
+
+function showResult(md) {
+  $('sourceOutput').value = md;
+  $('renderedOutput').innerHTML = renderMarkdown(md);
+  afterRender();
+}
+
+// 块级 Markdown 解析：标题 / 代码块 / 表格 / 列表(嵌套) / 引用 / 分割线 / 段落
+
+async function cleanText() {
+  const text = $('inputText').value.trim();
+  if (!text) { showToast('请先输入文本'); return; }
+  const apiCfg = getApiConfig();
+
+  const btn = $('cleanBtn');
+  const btnText = $('btnText');
+  const originalText = btnText.textContent;
+  btn.disabled = true;
+  btnText.innerHTML = '<span class="loading"></span> 清理中...';
+
+  try {
+    const prompt = $('systemPrompt').value;
+
+    // 统一走公共请求模块：空内容明确报错（不再静默渲染空白）、
+    // 输出截断时自动续写拼接、长度上限从 4096 提升到 16384
+    const raw = await fetchWithContinuation(apiCfg, [
+      { role: 'system', content: prompt },
+      { role: 'user', content: '请清理以下文本，输出规范的 Markdown 格式：\n\n' + text }
+    ], { maxTokens: 16384 });
+    // 模型偶尔会用 ```markdown 围栏包裹整体输出，剥离后再渲染
+    const cleaned = stripWrappingFence(raw);
+
+    showResult(cleaned);
+    localStorage.setItem('tc_result', cleaned);
+    localStorage.setItem('tc_input', text);
+
+    const outLen = cleaned.length;
+    const inLen = text.length;
+    $('outputStats').textContent = '输出 ' + outLen + ' 字符';
+    $('reduceStats').textContent = '缩减 ' + Math.round((1 - outLen / inLen) * 100) + '%';
+
+    showToast('清理完成');
+  } catch (e) {
+    showToast('错误: ' + e.message, true);
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btnText.textContent = originalText;
+  }
+}
+
+function copyResult() {
+  const text = $('sourceOutput').value;
+  if (!text) { showToast('没有内容可复制'); return; }
+  copyText(text, '已复制 Markdown 源码');
+}
+
+/* ===== 复制渲染结果（富文本，适配飞书粘贴） ===== */
+
+function downloadResult() {
+  const text = $('sourceOutput').value;
+  if (!text) { showToast('没有内容可下载'); return; }
+  const blob = new Blob([text], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'cleaned.md';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('已下载 cleaned.md');
+}
+
+
+/* ===== 全局 API 设置（所有页面共享 tc_config） ===== */
+
+init();
+</script>
+</body>
+</html>

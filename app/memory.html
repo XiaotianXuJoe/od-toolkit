@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>记忆中心</title>
+<link rel="stylesheet" href="common.css">
+  <style>
+  /* 本页专属的样式覆盖（与公共样式不同的部分） */
+  .rule-list { display: flex; flex-direction: column; gap: 8px; }
+  .rule-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border: 1px solid var(--border-light); border-radius: var(--radius-sm); background: var(--bg); }
+  .rule-item .rule-text { font-size: 13.5px; line-height: 1.6; flex: 1; word-break: break-all; }
+  .rule-item .rule-meta { display: flex; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .rule-badge { font-size: 11px; padding: 2px 8px; border-radius: 8px; background: rgba(0,113,227,0.1); color: var(--accent); font-weight: 500; }
+  .rule-badge.lang { background: var(--border-light); color: var(--text-secondary); }
+  .rule-time { font-size: 12px; color: var(--text-tertiary); }
+  .rule-del { border: none; background: none; color: var(--text-tertiary); cursor: pointer; font-size: 12px; padding: 4px 8px; border-radius: 6px; flex-shrink: 0; }
+  .rule-del:hover { background: #fee2e2; color: #dc2626; }
+  .rule-empty { padding: 24px; text-align: center; color: var(--text-tertiary); font-size: 13px; border: 1px dashed var(--border); border-radius: var(--radius-sm); }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>记忆中心</h1>
+    <p>管理代码微调中提炼出的偏好规则，让 AI 生成逐步逼近你的代码习惯</p>
+  </header>
+
+  <div class="nav-bar">
+    <a href="index.html">文本乱码清理</a>
+    <a href="code-template.html">代码模板生成</a>
+    <a href="solution.html">题解代码生成</a>
+    <a href="convert.html">代码语言转换</a>
+    <a href="explanation.html">题解说明生成</a>
+    <a href="csdn.html">CSDN 发布</a>
+    <a href="style.html">风格学习</a>
+    <a class="active" href="memory.html">记忆中心</a>
+    <button class="nav-settings" onclick="openSettings()" title="API 设置">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">i</span>功能说明</div>
+    <div class="hint-box" style="margin-bottom:0;">
+      在「题解代码生成」「代码模板生成」「代码语言转换」页面，每次 AI 生成/微调/转换后会出现<strong>确认操作条</strong>：
+      可「编辑」手动修改代码，「确认无误」完成确认。开启下方记忆开关后，若你确认的版本与 AI 原始版本有差异，
+      系统会自动对比两版代码，提炼 1~3 条可复用的偏好规则存入此处；后续生成的提示词会自动注入同类型的历史规则，逐步逼近你的代码习惯。
+      仅记录你确认过的结果，未确认的修改不会进入记忆。
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">1</span>记忆开关</div>
+    <div class="style-row" style="margin-top:0;">
+      <label class="style-toggle"><input type="checkbox" id="memoryToggle" onchange="toggleMemory(this.checked)"> 启用代码微调记忆（确认时提炼偏好规则并注入后续生成）</label>
+      <span class="style-status" id="memoryStatus"></span>
+    </div>
+    <div class="stats">
+      <span class="stat-badge" id="ruleStats">共 0 条规则</span>
+      <span class="stat-badge" id="syncStatus">同步状态未知</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">2</span>偏好规则</div>
+    <div class="tabs">
+      <button class="tab active" data-f="all" onclick="switchFeature('all', this)">全部</button>
+      <button class="tab" data-f="solution" onclick="switchFeature('solution', this)">题解</button>
+      <button class="tab" data-f="template" onclick="switchFeature('template', this)">模板</button>
+      <button class="tab" data-f="convert" onclick="switchFeature('convert', this)">转换</button>
+    </div>
+    <div class="rule-list" id="ruleList"></div>
+    <div class="btn-group" style="margin-top:12px;">
+      <button class="btn btn-danger" style="margin-left:auto;" onclick="clearAllRules()">清空全部</button>
+    </div>
+  </div>
+</div>
+
+<div class="settings-overlay hidden" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+  <div class="settings-panel">
+    <div class="settings-header">
+      <span>API 设置</span>
+      <button class="settings-close" onclick="closeSettings()" title="关闭">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="warning-box">API Key 可留空：留空时自动使用服务器内置 Key，打开即用。填写自己的 Key 则仅存储在浏览器本地，直连失败时自动改经本服务器同源中转转发（服务器不存储你的 Key）。所有功能页面共享此配置，只需设置一次。</div>
+    <div class="field">
+      <label>API Key</label>
+      <input type="password" id="cfgApiKey" placeholder="留空则使用服务器内置 Key" autocomplete="off">
+      <small>留空 = 使用服务器内置 Key（推荐）；自带 Key 时才会用到下方 Base URL 直连</small>
+    </div>
+    <div class="field">
+      <label>Base URL</label>
+      <input type="text" id="cfgBaseUrl" placeholder="https://api.moonshot.cn/v1" value="https://api.moonshot.cn/v1">
+    </div>
+    <div class="field">
+      <label>模型</label>
+      <input type="text" id="cfgModel" placeholder="kimi-k2.6" value="kimi-k2.6">
+    </div>
+    <div class="field">
+      <label>Temperature</label>
+      <input type="number" id="cfgTemperature" placeholder="0.6" value="0.6" min="0" max="2" step="0.1">
+      <small>kimi-k2.6 非思考模式必须设为 0.6，否则 API 报错</small>
+    </div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="cfgDisableThinking" checked style="width:auto;"> 关闭模型思考（显著提速，推荐）</label>
+      <small>思考型模型（如 kimi-k2.6）推理耗时很长，可能超时或耗尽输出预算；关闭后响应更快更稳。若所用端点不支持该参数会自动回退，不影响使用。</small>
+    </div>
+    <div class="field">
+      <label>同步密钥（可选）</label>
+      <input type="password" id="cfgSyncToken" placeholder="服务器设置了 SYNC_TOKEN 时填写" autocomplete="off">
+      <small>仅用于 API 中转鉴权（服务器设了 SYNC_TOKEN 时填写）；风格数据同步免密，无需为此填写</small>
+    </div>
+    <div class="btn-group" style="margin-top:4px;">
+      <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
+      <button class="btn btn-secondary" onclick="testConnection()">测试连接</button>
+      <button class="btn btn-secondary" onclick="loadSettings()">恢复已保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="common.js"></script>
+<script>
+/* ===== 记忆中心：开关 / 规则列表 / 同步状态 ===== */
+
+// feature 键 -> 中文名徽章
+const FEATURE_NAMES = { solution: '题解', template: '模板', convert: '转换' };
+let currentFeature = 'all';   // 当前筛选 tab
+
+// 时间格式化：YYYY-MM-DD HH:mm（createdAt 为秒级时间戳）
+function fmtTime(ts) {
+  const d = new Date(ts * 1000);
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())
+    + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+// 总开关：写入 memory_data.enabled 并推送服务器
+function toggleMemory(on) {
+  const d = getMemoryData();
+  d.enabled = on;
+  setMemoryData(d);
+  memorySyncPush();
+  renderMemory();
+  showToast(on ? '已启用代码微调记忆' : '已停用代码微调记忆');
+}
+
+// 规则筛选 tab
+function switchFeature(f, btn) {
+  currentFeature = f;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderRules();
+}
+
+// 删除单条规则
+function deleteRule(id) {
+  const d = getMemoryData();
+  d.rules = d.rules.filter(r => r.id !== id);
+  setMemoryData(d);
+  memorySyncPush();
+  renderMemory();
+  showToast('已删除该规则');
+}
+
+// 清空全部规则（confirm 对话框确认）
+function clearAllRules() {
+  const d = getMemoryData();
+  if (!d.rules.length) { showToast('暂无规则可清空'); return; }
+  if (!confirm('确定要清空全部偏好规则吗？\n将删除全部 ' + d.rules.length + ' 条规则（开关状态保留），此操作不可恢复。')) return;
+  d.rules = [];
+  setMemoryData(d);
+  memorySyncPush();
+  renderMemory();
+  showToast('已清空全部偏好规则');
+}
+
+// 渲染规则列表（按 feature 筛选，新的在前）
+function renderRules() {
+  const wrap = $('ruleList');
+  const d = getMemoryData();
+  const rules = d.rules
+    .filter(r => currentFeature === 'all' || r.feature === currentFeature)
+    .slice()
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  wrap.innerHTML = '';
+  if (!rules.length) {
+    wrap.innerHTML = '<div class="rule-empty">'
+      + (currentFeature === 'all' ? '暂无偏好规则。在代码页面确认微调结果后，提炼出的规则会显示在这里。'
+                                  : '该分类下暂无规则。')
+      + '</div>';
+    return;
+  }
+  rules.forEach(r => {
+    const item = document.createElement('div');
+    item.className = 'rule-item';
+    const body = document.createElement('div');
+    body.style.flex = '1';
+    const text = document.createElement('div');
+    text.className = 'rule-text';
+    text.textContent = r.text;
+    const meta = document.createElement('div');
+    meta.className = 'rule-meta';
+    const fb = document.createElement('span');
+    fb.className = 'rule-badge';
+    fb.textContent = FEATURE_NAMES[r.feature] || r.feature;
+    meta.appendChild(fb);
+    if (r.lang && LANG_CONFIG[r.lang]) {
+      const lb = document.createElement('span');
+      lb.className = 'rule-badge lang';
+      lb.textContent = LANG_CONFIG[r.lang].name;
+      meta.appendChild(lb);
+    }
+    const time = document.createElement('span');
+    time.className = 'rule-time';
+    time.textContent = r.createdAt ? fmtTime(r.createdAt) : '';
+    meta.appendChild(time);
+    body.appendChild(text);
+    body.appendChild(meta);
+    const del = document.createElement('button');
+    del.className = 'rule-del';
+    del.textContent = '删除';
+    del.onclick = () => deleteRule(r.id);
+    item.appendChild(body);
+    item.appendChild(del);
+    wrap.appendChild(item);
+  });
+}
+
+// 渲染开关状态与统计行
+function renderMemory() {
+  const d = getMemoryData();
+  $('memoryToggle').checked = d.enabled;
+  const status = $('memoryStatus');
+  status.className = 'style-status' + (d.enabled ? ' on' : '');
+  status.textContent = d.enabled ? '已启用 · 确认时将提炼偏好并注入后续生成' : '未启用';
+  $('ruleStats').textContent = '共 ' + d.rules.length + ' 条规则';
+  renderRules();
+}
+
+// 页面加载：先从服务器拉取（手动模式，失败给提示），再渲染
+async function init() {
+  renderMemory();
+  const ok = await memorySyncPull(true);
+  $('syncStatus').textContent = ok ? '已从服务器同步' : '同步失败，仅使用本浏览器数据';
+  renderMemory();
+}
+
+// 其他页面操作后的服务器数据到达时刷新界面
+window.addEventListener('memory-synced', () => renderMemory());
+
+init();
+</script>
+</body>
+</html>

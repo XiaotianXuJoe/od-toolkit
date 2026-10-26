@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>题解代码生成器</title>
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>题解代码生成器</h1>
+    <p>结合题目描述与代码模板框架，使用大模型生成带完整中文注释的题解代码</p>
+  </header>
+
+  <div class="nav-bar">
+    <a href="index.html">文本乱码清理</a>
+    <a href="code-template.html">代码模板生成</a>
+    <a class="active" href="solution.html">题解代码生成</a>
+    <a href="convert.html">代码语言转换</a>
+    <a href="explanation.html">题解说明生成</a>
+    <a href="csdn.html">CSDN 发布</a>
+    <a href="style.html">风格学习</a>
+    <a href="memory.html">记忆中心</a>
+    <button class="nav-settings" onclick="openSettings()" title="API 设置">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+
+
+  <div class="card">
+    <div class="card-title collapsible collapsed" onclick="toggleCollapse(this, 'promptArea')">系统提示词（点击展开/折叠）</div>
+    <div id="promptArea" class="collapse-content collapsed">
+      <div class="hint-box">提示词中可用占位符：<code>{lang}</code> 会被替换为当前选择的语言名称。</div>
+      <textarea id="systemPrompt" style="min-height:160px; font-size:13px;"></textarea>
+      <div class="btn-group" style="margin-top:8px;">
+        <button class="btn btn-secondary" onclick="resetPrompt('sol_prompt')">恢复默认</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">1</span>题目与模板</div>
+    <div class="field">
+      <label>选择语言</label>
+      <div class="lang-grid" id="langGrid">
+        <button class="lang-btn active" data-lang="python" onclick="selectLang(this)">Python</button>
+        <button class="lang-btn" data-lang="java" onclick="selectLang(this)">Java</button>
+        <button class="lang-btn" data-lang="cpp" onclick="selectLang(this)">C++</button>
+        <button class="lang-btn" data-lang="c" onclick="selectLang(this)">C</button>
+        <button class="lang-btn" data-lang="javascript" onclick="selectLang(this)">JavaScript</button>
+        <button class="lang-btn" data-lang="go" onclick="selectLang(this)">Go</button>
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="field">
+        <label>题目描述（可点击按钮导入「文本乱码清理」的结果，可编辑）</label>
+        <textarea id="questionText" placeholder="在此粘贴清理后的题目描述...&#10;&#10;可点击「导入已清理文本」导入「文本乱码清理」页的结果。"></textarea>
+        <div class="input-tools">
+          <button class="btn btn-secondary" onclick="importCleanedText('questionText')">导入已清理文本</button>
+          <button class="btn btn-secondary" onclick="clearInputValue('questionText', '题目描述')">删除输入内容</button>
+        </div>
+        <div class="stats"><span class="stat-badge" id="questionStats">0 字符</span></div>
+      </div>
+      <div class="field">
+        <label>代码模板框架（可点击按钮导入「代码模板生成」的当前语言模板，可编辑）</label>
+        <textarea id="templateText" placeholder="在此粘贴代码模板框架...&#10;&#10;可点击「导入已生成代码」导入「代码模板生成」页的当前语言模板。"></textarea>
+        <div class="input-tools">
+          <button class="btn btn-secondary" onclick="importGeneratedCode('templateText', [{ label: '代码模板生成', key: 'ct_codes', langs: [currentLang] }])">导入已生成代码</button>
+          <button class="btn btn-secondary" onclick="clearInputValue('templateText', '代码模板')">删除输入内容</button>
+        </div>
+        <div class="stats"><span class="stat-badge" id="templateStats">0 字符</span></div>
+      </div>
+    </div>
+    <div class="field">
+      <label>参考代码（可选，用于模仿其风格或算法表达）</label>
+      <textarea id="referenceCode" style="min-height:140px;" placeholder="在此粘贴某个类似题目的代码...&#10;&#10;生成题解时会模仿这份代码的代码风格、命名习惯和算法表达方式。"></textarea>
+      <div class="input-tools">
+        <button class="btn btn-secondary" onclick="importGeneratedCode('referenceCode', [{ label: '题解代码生成', key: 'sol_codes', langs: [currentLang] }, { label: '代码语言转换', key: 'cv_codes', langs: [currentLang] }])">导入已生成代码</button>
+        <button class="btn btn-secondary" onclick="clearInputValue('referenceCode', '参考代码')">删除输入内容</button>
+      </div>
+      <div class="stats"><span class="stat-badge" id="referenceStats">0 字符</span></div>
+    </div>
+    <div class="field">
+      <label>特殊要求（可选）</label>
+      <input type="text" id="extraRequirement" placeholder="例如：使用动态规划求解 / 使用双指针 / 要求时间复杂度 O(n)">
+      <div class="input-tools">
+        <button class="btn btn-secondary" onclick="clearInputValue('extraRequirement', '特殊要求')">删除输入内容</button>
+      </div>
+      <small>生成题解时会结合此要求；留空则由大模型自行选择合适算法</small>
+    </div>
+    <div class="btn-group" style="margin-top:4px;">
+      <button class="btn btn-primary" id="genBtn" onclick="generateSolution()">
+        <span id="btnText">生成题解代码</span>
+      </button>
+    </div>
+    <div class="style-row">
+      <label class="style-toggle"><input type="checkbox" id="styleToggle" onchange="toggleStyle(this.checked)"> 模仿我的个人风格</label>
+      <span class="style-status" id="styleStatus"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">2</span>题解代码</div>
+
+    <div class="code-window" id="codeWindow">
+      <div class="code-header">
+        <span class="code-dots"><i></i><i></i><i></i></span>
+        <span class="code-lang" id="codeLangLabel">Python</span>
+        <button class="copy-icon" id="copyIconBtn" onclick="copyResult()" title="复制代码">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+      </div>
+      <div class="code-body">
+        <div class="code-empty" id="codeEmpty">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          <div class="empty-title">生成的题解代码将显示在这里</div>
+          <div class="empty-hint" id="codeEmptyHint">确认题目与模板后点击「生成题解代码」</div>
+        </div>
+        <pre class="code-content hidden" id="codeContent"></pre>
+      </div>
+    </div>
+    <div id="confirmSlot"></div>
+
+    <div class="chat-panel">
+      <div class="chat-header">
+        <span>AI 微调代码<span class="chat-lang-tag" id="chatLangTag">Python</span></span>
+        <button class="chat-clear" onclick="clearChat()">清空对话</button>
+      </div>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="输入修改指令，如「改用二分查找」「补充边界情况处理」，回车发送..."
+               onkeydown="if(event.key==='Enter'&&!event.isComposing)sendChat()">
+        <button class="btn btn-primary chat-send" id="chatSendBtn" onclick="sendChat()">发送</button>
+      </div>
+    </div>
+
+    <div class="btn-group" style="margin-top:12px;">
+      <button class="btn btn-secondary" onclick="copyResult()">复制代码</button>
+      <button class="btn btn-secondary" onclick="downloadResult()">下载代码文件</button>
+      <button class="btn btn-danger" style="margin-left:auto;" onclick="clearAllCache()">清空全部缓存</button>
+    </div>
+    <div class="stats">
+      <span class="stat-badge" id="lineStats">0 行</span>
+      <span class="stat-badge" id="charStats">0 字符</span>
+    </div>
+  </div>
+</div>
+
+
+<div class="settings-overlay hidden" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+  <div class="settings-panel">
+    <div class="settings-header">
+      <span>API 设置</span>
+      <button class="settings-close" onclick="closeSettings()" title="关闭">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="warning-box">API Key 可留空：留空时自动使用服务器内置 Key，打开即用。填写自己的 Key 则仅存储在浏览器本地，直连失败时自动改经本服务器同源中转转发（服务器不存储你的 Key）。所有功能页面共享此配置，只需设置一次。</div>
+    <div class="field">
+      <label>API Key</label>
+      <input type="password" id="cfgApiKey" placeholder="留空则使用服务器内置 Key" autocomplete="off">
+      <small>留空 = 使用服务器内置 Key（推荐）；自带 Key 时才会用到下方 Base URL 直连</small>
+    </div>
+    <div class="field">
+      <label>Base URL</label>
+      <input type="text" id="cfgBaseUrl" placeholder="https://api.moonshot.cn/v1" value="https://api.moonshot.cn/v1">
+    </div>
+    <div class="field">
+      <label>模型</label>
+      <input type="text" id="cfgModel" placeholder="kimi-k2.6" value="kimi-k2.6">
+    </div>
+    <div class="field">
+      <label>Temperature</label>
+      <input type="number" id="cfgTemperature" placeholder="0.6" value="0.6" min="0" max="2" step="0.1">
+      <small>kimi-k2.6 非思考模式必须设为 0.6，否则 API 报错</small>
+    </div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="cfgDisableThinking" checked style="width:auto;"> 关闭模型思考（显著提速，推荐）</label>
+      <small>思考型模型（如 kimi-k2.6）推理耗时很长，可能超时或耗尽输出预算；关闭后响应更快更稳。若所用端点不支持该参数会自动回退，不影响使用。</small>
+    </div>
+    <div class="field">
+      <label>同步密钥（可选）</label>
+      <input type="password" id="cfgSyncToken" placeholder="服务器设置了 SYNC_TOKEN 时填写" autocomplete="off">
+      <small>仅用于 API 中转鉴权（服务器设了 SYNC_TOKEN 时填写）；风格数据同步免密，无需为此填写</small>
+    </div>
+    <div class="btn-group" style="margin-top:4px;">
+      <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
+      <button class="btn btn-secondary" onclick="testConnection()">测试连接</button>
+      <button class="btn btn-secondary" onclick="loadSettings()">恢复已保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">已复制到剪贴板</div>
+
+<script src="common.js"></script>
+<script>
+const DEFAULT_PROMPT = `你是一位专业的算法竞赛题解编写专家。你的任务是根据题目描述和代码模板框架，生成完整、正确、可直接提交的 {lang} 题解代码。
+
+## 生成规范
+
+### 1. 基于模板框架
+- 必须严格沿用给定代码模板框架中的类名、方法名、函数签名、参数类型和返回值类型
+- 必须保留模板中的输入读取和输出打印逻辑（ACM 模式入口），如输入解析有特殊要求可做适配性修改
+- 在模板预留的待填充函数体内实现完整的解题逻辑，不要只给框架或占位符
+
+### 2. 中文注释规范（必须完整）
+- 在 Solution 类/核心函数上方用注释说明算法思路（2-4 行），包括：采用的算法、核心思想、时间/空间复杂度
+- 关键步骤和关键变量必须添加中文行内注释，说明其作用
+- 边界情况、特殊判断处必须添加中文注释说明原因
+- 注释语言为简体中文，风格简洁清晰
+
+### 3. 代码正确性
+- 代码必须逻辑完整、语法正确，可以直接编译/运行并通过题目样例
+- 仔细处理边界情况（空输入、单个元素、极值等）
+- 输入输出格式必须与题目描述严格一致
+
+### 4. C 语言特殊规范（仅当目标语言为 C 时必须遵守）
+- 必须包含完整的 ACM 模式入口（main 函数），使用标准库（stdio.h、stdlib.h、string.h）完成输入读取、解析与输出打印
+- 使用 fgets 读取输入时必须检查返回值，若返回 NULL 则将输入按空字符串处理；去除行尾换行必须同时兼容 \\n、\\r\\n 和纯 \\r
+- 字符数组与定长数组必须初始化（如 char buf[1024] = {0}）；malloc/calloc 分配的内存需在合适位置 free
+- 所需的辅助函数（如 qsort 比较函数）必须在调用处之前完整实现，不允许只写声明不写实现
+
+### 5. 特殊要求
+- 如果用户提供了特殊要求（如指定算法、指定复杂度），必须严格遵循
+- 如果用户提供了参考代码，需模仿其代码风格、命名习惯和算法表达方式，但解题逻辑必须基于当前题目独立实现，不能照抄
+
+### 6. 输出格式
+- 仅输出代码，不要输出任何解释、说明或 markdown 代码块标记
+- 不要输出测试用例或示例调用代码`;
+
+let currentLang = 'python';
+let rawCode = '';
+let solutionCache = {};  // lang -> 题解代码
+let chatCache = {};      // lang -> 对话记录
+let templateCache = {};  // lang -> 模板代码（来自代码模板生成页）
+let aiCodeByLang = {};   // lang -> 最近一次 AI 原始输出快照（确认条 diff 基准）
+
+/* ===== 代码微调记忆：确认状态持久化（sol_confirmed: lang -> bool）与确认条 ===== */
+
+function getConfirmed() {
+  try { return JSON.parse(localStorage.getItem('sol_confirmed') || '{}'); } catch (e) { return {}; }
+}
+// 确认/重新生成时更新标记：重新生成或微调后清除对应语言标记，操作条重新出现
+function markConfirmed(lang, v) {
+  const s = getConfirmed();
+  if (v) s[lang] = true; else delete s[lang];
+  localStorage.setItem('sol_confirmed', JSON.stringify(s));
+}
+
+// 按当前语言视图刷新确认条（renderCode 末尾统一调用，切换语言/重新生成自动跟随）
+function renderConfirmBar() {
+  const container = $('confirmSlot');
+  if (!container) return;
+  if (!rawCode) {
+    const old = container.querySelector('.memory-confirm-bar');
+    if (old) old.remove();
+    return;
+  }
+  // 快照缺失（刷新/缓存恢复）时捕获「确认条首次出现时」的代码为 diff 基准并持久化；
+  // 不能用 || rawCode 兜底：编辑保存后重渲染会把基准污染成当前代码，后续确认永远误判「与 AI 一致」
+  if (!aiCodeByLang[currentLang]) { aiCodeByLang[currentLang] = rawCode; saveAiCodes(); }
+  showConfirmBar(container, {
+    feature: 'solution',
+    lang: currentLang,
+    aiCode: aiCodeByLang[currentLang] || '',
+    confirmed: !!getConfirmed()[currentLang],
+    // 确认后把 diff 基准更新为本次确认版，下一轮编辑只与最近确认版对比
+    onConfirm: (finalCode) => { markConfirmed(currentLang, true); if (finalCode) { aiCodeByLang[currentLang] = finalCode; saveAiCodes(); } },
+    getCode: () => rawCode,
+    setCode: (code) => { solutionCache[currentLang] = code; saveSolutions(); renderCode(code); }
+  });
+}
+
+function saveAiCodes() { localStorage.setItem('sol_ai_codes', JSON.stringify(aiCodeByLang)); }
+
+/* ===== 个人风格档案注入（来自「风格学习」页） ===== */
+
+function init() {
+  $('systemPrompt').value = localStorage.getItem('sol_prompt') || DEFAULT_PROMPT;
+  persistPromptOnInput('sol_prompt');
+  // 恢复缓存
+  try { solutionCache = JSON.parse(localStorage.getItem('sol_codes') || '{}'); } catch (e) { solutionCache = {}; }
+  try { chatCache = JSON.parse(localStorage.getItem('sol_chats') || '{}'); } catch (e) { chatCache = {}; }
+  try { templateCache = JSON.parse(localStorage.getItem('ct_codes') || '{}'); } catch (e) { templateCache = {}; }
+  try { aiCodeByLang = JSON.parse(localStorage.getItem('sol_ai_codes') || '{}'); } catch (e) { aiCodeByLang = {}; }   // 恢复 diff 基准快照
+
+  const cachedLang = localStorage.getItem('sol_lang') || localStorage.getItem('ct_lang');
+  if (cachedLang && LANG_CONFIG[cachedLang]) currentLang = cachedLang;
+  syncLangButtons();
+  $('codeLangLabel').textContent = LANG_CONFIG[currentLang].name;
+
+  // 仅恢复本页自己的输入缓存；上游产物（清理文本/模板/题解）一律通过输入框旁的按钮手动导入
+  const question = localStorage.getItem('sol_question') || '';
+  $('questionText').value = question;
+  const req = localStorage.getItem('sol_requirement');
+  if (req) $('extraRequirement').value = req;
+  const ref = localStorage.getItem('sol_reference');
+  if (ref) $('referenceCode').value = ref;
+
+  if (solutionCache[currentLang]) renderCode(solutionCache[currentLang]);
+  else renderChat();
+  refreshStyleRow();
+  updateStats();
+}
+
+
+function selectLang(btn) {
+  currentLang = btn.dataset.lang;
+  localStorage.setItem('sol_lang', currentLang);
+  syncLangButtons();
+  $('codeLangLabel').textContent = LANG_CONFIG[currentLang].name;
+  // 切换语言时展示已缓存题解；模板不再自动带入，通过「导入已生成代码」按钮手动导入
+  if (solutionCache[currentLang]) renderCode(solutionCache[currentLang]);
+  else showCodeEmpty('该语言尚未生成题解，点击「生成题解代码」');
+  updateStats();
+  renderChat();
+}
+
+function showCodeEmpty(hint) {
+  rawCode = '';
+  $('codeContent').classList.add('hidden');
+  $('codeEmpty').classList.remove('hidden');
+  if (hint) $('codeEmptyHint').textContent = hint;
+  $('lineStats').textContent = '0 行';
+  $('charStats').textContent = '0 字符';
+  renderConfirmBar();   // 无代码时移除确认条
+}
+
+function updateStats() {
+  $('questionStats').textContent = $('questionText').value.length + ' 字符';
+  $('templateStats').textContent = $('templateText').value.length + ' 字符';
+  $('referenceStats').textContent = $('referenceCode').value.length + ' 字符';
+}
+$('questionText').addEventListener('input', () => {
+  localStorage.setItem('sol_question', $('questionText').value);
+  updateStats();
+});
+$('templateText').addEventListener('input', updateStats);
+$('extraRequirement').addEventListener('input', () => {
+  localStorage.setItem('sol_requirement', $('extraRequirement').value);
+});
+$('referenceCode').addEventListener('input', () => {
+  localStorage.setItem('sol_reference', $('referenceCode').value);
+  updateStats();
+});
+
+/* ===== 语法高亮 ===== */
+
+
+function renderCode(code) {
+  rawCode = code;
+  const highlighted = highlightCode(code, currentLang);
+  const lines = highlighted.split('\n');
+  $('codeContent').innerHTML = lines
+    .map(l => '<div class="cl"><span class="lc">' + (l || ' ') + '</span></div>')
+    .join('');
+  $('codeEmpty').classList.add('hidden');
+  $('codeContent').classList.remove('hidden');
+  $('codeLangLabel').textContent = LANG_CONFIG[currentLang].name;
+  $('lineStats').textContent = code.split('\n').length + ' 行';
+  $('charStats').textContent = code.length + ' 字符';
+  syncLangButtons();
+  renderChat();
+  renderConfirmBar();
+}
+
+function saveSolutions() { localStorage.setItem('sol_codes', JSON.stringify(solutionCache)); }
+function saveChats() { localStorage.setItem('sol_chats', JSON.stringify(chatCache)); }
+
+// 清空本页所有缓存（题目、模板、参考代码、特殊要求、各语言题解、AI 微调对话），用于开始新一道题目
+function clearAllCache() {
+  const hasData = Object.keys(solutionCache).length || Object.keys(chatCache).length
+    || $('questionText').value.trim() || $('extraRequirement').value.trim()
+    || $('referenceCode').value.trim();
+  if (hasData && !confirm('确定要清空全部缓存吗？\n将删除本页保存的题目描述、特殊要求、参考代码、所有语言的题解代码和 AI 微调对话记录，此操作不可恢复。')) return;
+  solutionCache = {};
+  chatCache = {};
+  aiCodeByLang = {};
+  saveAiCodes();
+  saveSolutions();
+  saveChats();
+  ['sol_codes', 'sol_chats', 'sol_lang', 'sol_question', 'sol_requirement', 'sol_reference', 'sol_confirmed', 'sol_ai_codes']
+    .forEach(k => localStorage.removeItem(k));
+  currentLang = 'python';
+  rawCode = '';
+  syncLangButtons();
+  $('codeLangLabel').textContent = LANG_CONFIG[currentLang].name;
+  $('questionText').value = '';
+  $('extraRequirement').value = '';
+  $('referenceCode').value = '';
+  $('templateText').value = '';
+  showCodeEmpty('填写题目描述与模板后，点击「生成题解代码」');
+  renderChat();
+  updateStats();
+  showToast('缓存已清空，可以开始新的题目');
+}
+
+// 去除模型返回中的 markdown 代码块围栏（兼容 CRLF 换行、大小写语言标记与行内空白）
+
+// 从 API 响应中安全提取代码内容：校验空响应、剥围栏、提示长度截断
+
+// 统一走 common.js 的 fetchWithContinuation：网络层错误（Failed to fetch）自动重试、
+// 429/5xx 瞬时错误重试、截断自动续写、空内容明确报错
+async function callApi(messages) {
+  const apiCfg = getApiConfig();
+  const text = await fetchWithContinuation(apiCfg, messages, { maxTokens: 16384 });
+  const clean = stripCodeFences(text);
+  if (!clean) throw new Error('模型返回了空内容，请重试');
+  return clean;
+}
+
+async function generateSolution() {
+  const question = $('questionText').value.trim();
+  if (!question) { showToast('请先填写题目描述'); return; }
+  const template = $('templateText').value.trim();
+  if (!template) { showToast('请先填写代码模板框架'); return; }
+
+  const btn = $('genBtn');
+  const btnText = $('btnText');
+  const originalText = btnText.textContent;
+  btn.disabled = true;
+  btnText.innerHTML = '<span class="loading"></span> 生成中...';
+
+  try {
+    const langName = LANG_CONFIG[currentLang].name;
+    const prompt = $('systemPrompt').value.replace(/\{lang\}/g, langName) + getStyleInject('code') + getMemoryInject('solution');
+    const requirement = $('extraRequirement').value.trim();
+
+    const reference = $('referenceCode').value.trim();
+    let userContent = '请根据以下题目描述和代码模板框架，生成完整的 ' + langName + ' 题解代码。'
+      + '要求：严格沿用模板框架的结构与函数签名，在其中实现完整解题逻辑，并添加完整的中文注释。';
+    if (requirement) userContent += '\n\n特殊要求（必须遵循）：' + requirement;
+    if (reference) userContent += '\n\n参考代码（请模仿其代码风格、命名习惯和算法表达方式，但不要照抄其解题逻辑）：\n' + reference;
+    userContent += '\n\n题目描述：\n' + question + '\n\n代码模板框架：\n' + template;
+
+    const cleanCode = await callApi([
+      { role: 'system', content: prompt },
+      { role: 'user', content: userContent }
+    ]);
+
+    solutionCache[currentLang] = cleanCode;
+    saveSolutions();
+    localStorage.setItem('sol_question', question);
+    aiCodeByLang[currentLang] = cleanCode; saveAiCodes();   // 记录 AI 原始输出快照（确认条 diff 基准）
+    markConfirmed(currentLang, false);       // 重新生成后需重新确认
+    renderCode(cleanCode);
+    showToast('题解代码生成完成');
+  } catch (e) {
+    showToast('错误: ' + e.message, true);
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btnText.textContent = originalText;
+  }
+}
+
+/* ===== AI 对话微调当前语言题解 ===== */
+function renderChat() {
+  const box = $('chatMessages');
+  if (!box) return;
+  $('chatLangTag').textContent = LANG_CONFIG[currentLang].name;
+  const history = chatCache[currentLang] || [];
+  box.innerHTML = '';
+  const hint = document.createElement('div');
+  hint.className = 'chat-msg assistant';
+  hint.textContent = rawCode
+    ? '用自然语言描述修改要求，例如「改用动态规划」「优化到 O(n) 时间复杂度」，修改将应用到当前 ' + LANG_CONFIG[currentLang].name + ' 题解代码。'
+    : '请先生成 ' + LANG_CONFIG[currentLang].name + ' 题解代码，然后再用指令微调。';
+  box.appendChild(hint);
+  history.forEach(m => {
+    const d = document.createElement('div');
+    d.className = 'chat-msg ' + (m.role === 'user' ? 'user' : 'assistant');
+    d.textContent = m.role === 'user' ? m.content : m.summary;
+    box.appendChild(d);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+async function sendChat() {
+  const input = $('chatInput');
+  const instruction = input.value.trim();
+  if (!instruction) return;
+  if (!rawCode) { showToast('请先生成题解代码'); return; }
+
+  input.value = '';
+  if (!chatCache[currentLang]) chatCache[currentLang] = [];
+  const history = chatCache[currentLang];
+  history.push({ role: 'user', content: instruction });
+  renderChat();
+
+  const sendBtn = $('chatSendBtn');
+  const originalText = sendBtn.textContent;
+  sendBtn.disabled = true;
+  sendBtn.innerHTML = '<span class="loading"></span>';
+
+  try {
+    const langName = LANG_CONFIG[currentLang].name;
+    const prompt = $('systemPrompt').value.replace(/\{lang\}/g, langName) + getStyleInject('code') + getMemoryInject('solution');
+
+    const apiMessages = [{ role: 'system', content: prompt }];
+    history.slice(0, -1).forEach(m => apiMessages.push({ role: m.role, content: m.content }));
+    apiMessages.push({
+      role: 'user',
+      content: '以下是当前的 ' + langName + ' 题解代码：\n' + rawCode
+        + '\n\n请根据以下指令修改题解代码，保持完整的中文注释，严格遵守系统提示词中的全部规范，'
+        + '仅输出修改后的完整代码，不要输出任何解释：\n' + instruction
+    });
+
+    const cleanCode = await callApi(apiMessages);
+
+    solutionCache[currentLang] = cleanCode;
+    saveSolutions();
+    aiCodeByLang[currentLang] = cleanCode; saveAiCodes();   // 微调输出为新的 diff 基准
+    markConfirmed(currentLang, false);
+    renderCode(cleanCode);
+    history.push({ role: 'assistant', content: cleanCode, summary: '已根据指令更新代码（' + cleanCode.split('\n').length + ' 行）' });
+    if (history.length > 20) chatCache[currentLang] = history.slice(-20);
+    saveChats();
+    renderChat();
+    showToast('代码已按指令更新');
+  } catch (e) {
+    history.pop();
+    renderChat();
+    showToast('错误: ' + e.message, true);
+    console.error(e);
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.textContent = originalText;
+  }
+}
+
+function clearChat() {
+  chatCache[currentLang] = [];
+  saveChats();
+  renderChat();
+  showToast('已清空当前语言的对话记录');
+}
+
+function copyResult() {
+  if (!rawCode) { showToast('没有内容可复制'); return; }
+  copyText(rawCode, '已复制到剪贴板', () => {
+    const btn = $('copyIconBtn');
+    btn.classList.add('copied');
+    setTimeout(() => btn.classList.remove('copied'), 1200);
+  });
+}
+
+function downloadResult() {
+  if (!rawCode) { showToast('没有内容可下载'); return; }
+  const ext = LANG_CONFIG[currentLang].ext;
+  const blob = new Blob([rawCode], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'solution.' + ext;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('已下载 solution.' + ext);
+}
+
+
+/* ===== 全局 API 设置（所有页面共享 tc_config） ===== */
+
+init();
+</script>
+</body>
+</html>

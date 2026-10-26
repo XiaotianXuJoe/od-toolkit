@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>代码语言转换</title>
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>代码语言转换</h1>
+    <p>将某种语言的代码一键转换为其他语言，自动复用对应语言模板的输入输出框架</p>
+  </header>
+
+  <div class="nav-bar">
+    <a href="index.html">文本乱码清理</a>
+    <a href="code-template.html">代码模板生成</a>
+    <a href="solution.html">题解代码生成</a>
+    <a class="active" href="convert.html">代码语言转换</a>
+    <a href="explanation.html">题解说明生成</a>
+    <a href="csdn.html">CSDN 发布</a>
+    <a href="style.html">风格学习</a>
+    <a href="memory.html">记忆中心</a>
+    <button class="nav-settings" onclick="openSettings()" title="API 设置">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">1</span>源代码</div>
+    <div class="field">
+      <label>源代码语言</label>
+      <div class="lang-grid" id="srcLangGrid">
+        <button class="lang-btn active" data-lang="python" onclick="selectSourceLang(this)">Python</button>
+        <button class="lang-btn" data-lang="java" onclick="selectSourceLang(this)">Java</button>
+        <button class="lang-btn" data-lang="cpp" onclick="selectSourceLang(this)">C++</button>
+        <button class="lang-btn" data-lang="c" onclick="selectSourceLang(this)">C</button>
+        <button class="lang-btn" data-lang="javascript" onclick="selectSourceLang(this)">JavaScript</button>
+        <button class="lang-btn" data-lang="go" onclick="selectSourceLang(this)">Go</button>
+      </div>
+    </div>
+    <textarea id="sourceCode" placeholder="在此粘贴要转换的源代码...&#10;&#10;可点击「导入已生成代码」导入「题解代码生成」页的当前语言题解代码。"></textarea>
+    <div class="input-tools">
+      <button class="btn btn-secondary" onclick="importGeneratedCode('sourceCode', [{ label: '题解代码生成', key: 'sol_codes', langs: [sourceLang] }])">导入已生成代码</button>
+      <button class="btn btn-secondary" onclick="clearInputValue('sourceCode', '源代码')">删除输入内容</button>
+    </div>
+    <div class="stats">
+      <span class="stat-badge" id="sourceStats">0 字符</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">2</span>转换结果</div>
+
+    <div class="code-window" id="codeWindow">
+      <div class="code-header">
+        <span class="code-dots"><i></i><i></i><i></i></span>
+        <span class="code-lang" id="codeLangLabel">-</span>
+        <button class="copy-icon" id="copyIconBtn" onclick="copyResult()" title="复制代码">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+      </div>
+      <div class="code-body">
+        <div class="code-empty" id="codeEmpty">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          <div class="empty-title">转换后的代码将显示在这里</div>
+          <div class="empty-hint" id="codeEmptyHint">粘贴源代码后，点击下方按钮转换为目标语言</div>
+        </div>
+        <pre class="code-content hidden" id="codeContent"></pre>
+      </div>
+    </div>
+    <div id="confirmSlot"></div>
+
+    <div class="convert-bar hidden" id="convertBar">
+      <span class="convert-label">一键转换为</span>
+      <div class="convert-btns" id="convertBtns"></div>
+      <div style="margin-left:auto; display:flex; gap:8px;">
+        <button class="btn btn-secondary convert-all-btn" style="margin-left:0;" id="regenBtn" onclick="regenerateCurrent()">重新生成当前语言</button>
+        <button class="btn btn-secondary convert-all-btn" style="margin-left:0;" id="deriveOneBtn"
+          onclick="deriveCurrentTemplate()"
+          title="仅从当前查看（或源代码）语言的题解代码提取默认模板，写入「代码模板生成」页缓存；用于个别语言模板不符合要求时的单独重新提取">提取当前语言模板</button>
+        <button class="btn btn-primary convert-all-btn" style="margin-left:0;" id="genAllBtn" onclick="convertAll()">一键转换全部语言</button>
+      </div>
+    </div>
+
+    <div class="chat-panel">
+      <div class="chat-header">
+        <span>AI 微调代码<span class="chat-lang-tag" id="chatLangTag">-</span></span>
+        <button class="chat-clear" onclick="clearChat()">清空对话</button>
+      </div>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="输入修改指令，如「给关键步骤加注释」「改用更高效的写法」，回车发送..."
+               onkeydown="if(event.key==='Enter'&&!event.isComposing)sendChat()">
+        <button class="btn btn-primary chat-send" id="chatSendBtn" onclick="sendChat()">发送</button>
+      </div>
+    </div>
+
+    <div class="btn-group" style="margin-top:12px;">
+      <button class="btn btn-secondary" onclick="copyResult()">复制代码</button>
+      <button class="btn btn-secondary" onclick="downloadResult()">下载代码文件</button>
+      <button class="btn btn-secondary" id="deriveTplBtn" onclick="deriveAllTemplates()"
+        title="从各语言题解代码中提取默认代码模板（删除解题主干，保留输入输出框架与函数头），写入「代码模板生成」页缓存，保证模板与题解的输入输出完全一致">由题解生成默认模板</button>
+      <button class="btn btn-danger" style="margin-left:auto;" onclick="clearAllCache()">清空全部缓存</button>
+    </div>
+    <div class="stats">
+      <span class="stat-badge" id="lineStats">0 行</span>
+      <span class="stat-badge" id="charStats">0 字符</span>
+    </div>
+  </div>
+</div>
+
+
+<div class="settings-overlay hidden" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+  <div class="settings-panel">
+    <div class="settings-header">
+      <span>API 设置</span>
+      <button class="settings-close" onclick="closeSettings()" title="关闭">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="warning-box">API Key 可留空：留空时自动使用服务器内置 Key，打开即用。填写自己的 Key 则仅存储在浏览器本地，直连失败时自动改经本服务器同源中转转发（服务器不存储你的 Key）。所有功能页面共享此配置，只需设置一次。</div>
+    <div class="field">
+      <label>API Key</label>
+      <input type="password" id="cfgApiKey" placeholder="留空则使用服务器内置 Key" autocomplete="off">
+      <small>留空 = 使用服务器内置 Key（推荐）；自带 Key 时才会用到下方 Base URL 直连</small>
+    </div>
+    <div class="field">
+      <label>Base URL</label>
+      <input type="text" id="cfgBaseUrl" placeholder="https://api.moonshot.cn/v1" value="https://api.moonshot.cn/v1">
+    </div>
+    <div class="field">
+      <label>模型</label>
+      <input type="text" id="cfgModel" placeholder="kimi-k2.6" value="kimi-k2.6">
+    </div>
+    <div class="field">
+      <label>Temperature</label>
+      <input type="number" id="cfgTemperature" placeholder="0.6" value="0.6" min="0" max="2" step="0.1">
+      <small>kimi-k2.6 非思考模式必须设为 0.6，否则 API 报错</small>
+    </div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="cfgDisableThinking" checked style="width:auto;"> 关闭模型思考（显著提速，推荐）</label>
+      <small>思考型模型（如 kimi-k2.6）推理耗时很长，可能超时或耗尽输出预算；关闭后响应更快更稳。若所用端点不支持该参数会自动回退，不影响使用。</small>
+    </div>
+    <div class="field">
+      <label>同步密钥（可选）</label>
+      <input type="password" id="cfgSyncToken" placeholder="服务器设置了 SYNC_TOKEN 时填写" autocomplete="off">
+      <small>仅用于 API 中转鉴权（服务器设了 SYNC_TOKEN 时填写）；风格数据同步免密，无需为此填写</small>
+    </div>
+    <div class="btn-group" style="margin-top:4px;">
+      <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
+      <button class="btn btn-secondary" onclick="testConnection()">测试连接</button>
+      <button class="btn btn-secondary" onclick="loadSettings()">恢复已保存</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="toast" id="toast">已复制到剪贴板</div>
+
+<script src="common.js"></script>
+<script>
+
+// 语言转换依赖链：Python → Java/C++，Java → JS/Go，C++ → C
+const CONVERT_PARENT = { java: 'python', cpp: 'python', javascript: 'java', go: 'java', c: 'cpp' };
+
+let sourceLang = 'python';   // 源代码语言
+let currentLang = '';        // 当前查看的结果语言
+let rawCode = '';
+let sourceCache = {};        // lang -> 源代码
+let convertCache = {};       // lang -> 转换结果
+let chatCache = {};          // lang -> 对话记录
+let templateCache = {};      // lang -> 默认代码模板（来自代码模板生成页）
+let solutionCacheRef = {};   // lang -> 题解代码（来自题解代码生成页）
+let aiCodeByLang = {};       // lang -> 最近一次 AI 转换/微调原始输出快照（确认条 diff 基准）
+
+/* ===== 代码微调记忆：确认状态持久化（cv_confirmed: lang -> bool）与确认条 ===== */
+
+function getConfirmed() {
+  try { return JSON.parse(localStorage.getItem('cv_confirmed') || '{}'); } catch (e) { return {}; }
+}
+// 确认/重新转换时更新标记：重新转换或微调后清除对应语言标记，操作条重新出现
+function markConfirmed(lang, v) {
+  const s = getConfirmed();
+  if (v) s[lang] = true; else delete s[lang];
+  localStorage.setItem('cv_confirmed', JSON.stringify(s));
+}
+
+// 按当前查看的语言视图刷新确认条（renderCode 末尾统一调用；
+// convertAll 并行转换多个语言时，每个语言各自有快照与确认标记，切换视图即跟随刷新）
+function renderConfirmBar() {
+  const container = $('confirmSlot');
+  if (!container) return;
+  if (!rawCode || !currentLang) {
+    const old = container.querySelector('.memory-confirm-bar');
+    if (old) old.remove();
+    return;
+  }
+  // 快照缺失（刷新/缓存恢复）时捕获「确认条首次出现时」的代码为 diff 基准并持久化；
+  // 不能用 || rawCode 兜底：编辑保存后重渲染会把基准污染成当前代码，后续确认永远误判「与 AI 一致」
+  if (!aiCodeByLang[currentLang]) { aiCodeByLang[currentLang] = rawCode; saveAiCodes(); }
+  showConfirmBar(container, {
+    feature: 'convert',
+    lang: currentLang,
+    aiCode: aiCodeByLang[currentLang] || '',
+    confirmed: !!getConfirmed()[currentLang],
+    // 确认后把 diff 基准更新为本次确认版，下一轮编辑只与最近确认版对比
+    onConfirm: (finalCode) => { markConfirmed(currentLang, true); if (finalCode) { aiCodeByLang[currentLang] = finalCode; saveAiCodes(); } },
+    getCode: () => rawCode,
+    setCode: (code) => { convertCache[currentLang] = code; saveConverts(); renderCode(code); }
+  });
+}
+
+function saveAiCodes() { localStorage.setItem('cv_ai_codes', JSON.stringify(aiCodeByLang)); }
+
+// 模板提取结果的确认条（feature='template'）：编辑/确认直接作用于「代码模板生成」页缓存
+function showTemplateConfirmBar(lang, tpl) {
+  const container = $('confirmSlot');
+  if (!container) return;
+  showConfirmBar(container, {
+    feature: 'template',
+    lang: lang,
+    aiCode: tpl,
+    getCode: () => templateCache[lang] || tpl,
+    setCode: (code) => {
+      templateCache[lang] = code;
+      let ct = {};
+      try { ct = JSON.parse(localStorage.getItem('ct_codes') || '{}'); } catch (e) {}
+      ct[lang] = code;
+      localStorage.setItem('ct_codes', JSON.stringify(ct));
+      showToast(LANG_CONFIG[lang].name + ' 模板修改已保存到「代码模板生成」页缓存');
+    }
+  });
+}
+
+
+/* ===== 全局 API 设置（所有页面共享 tc_config） ===== */
+
+
+function init() {
+  try { sourceCache = JSON.parse(localStorage.getItem('cv_sources') || '{}'); } catch (e) { sourceCache = {}; }
+  try { convertCache = JSON.parse(localStorage.getItem('cv_codes') || '{}'); } catch (e) { convertCache = {}; }
+  try { chatCache = JSON.parse(localStorage.getItem('cv_chats') || '{}'); } catch (e) { chatCache = {}; }
+  try { templateCache = JSON.parse(localStorage.getItem('ct_codes') || '{}'); } catch (e) { templateCache = {}; }
+  try { solutionCacheRef = JSON.parse(localStorage.getItem('sol_codes') || '{}'); } catch (e) { solutionCacheRef = {}; }
+  try { aiCodeByLang = JSON.parse(localStorage.getItem('cv_ai_codes') || '{}'); } catch (e) { aiCodeByLang = {}; }   // 恢复 diff 基准快照
+
+  const cachedSrc = localStorage.getItem('cv_source_lang');
+  if (cachedSrc && LANG_CONFIG[cachedSrc]) sourceLang = cachedSrc;
+  syncSourceButtons();
+  loadSourceForLang(sourceLang);
+
+  // 已转换结果永久保留（仅「清空全部缓存」/「重新生成」会移除）；
+  // 源代码自生成后有变更时仅做 ⚠ 过期标记与提示，不删除任何结果
+  if (Object.keys(convertCache).some(l => l !== sourceLang && isStale(l))) {
+    showToast('部分转换结果（标 ⚠）生成后源代码已有变更，可点击「重新生成当前语言」更新');
+  }
+
+  const cachedView = localStorage.getItem('cv_view_lang');
+  if (cachedView && convertCache[cachedView]) {
+    currentLang = cachedView;
+    renderCode(convertCache[cachedView]);
+  } else {
+    renderConvertBar();
+    renderChat();
+  }
+  updateStats();
+}
+
+function saveSources() { localStorage.setItem('cv_sources', JSON.stringify(sourceCache)); }
+function saveConverts() { localStorage.setItem('cv_codes', JSON.stringify(convertCache)); }
+
+// 清空本页所有缓存（源代码、各语言转换结果、AI 微调对话），用于开始新一道题目
+function clearAllCache() {
+  const hasData = Object.keys(sourceCache).length || Object.keys(convertCache).length
+    || Object.keys(chatCache).length || $('sourceCode').value.trim();
+  if (hasData && !confirm('确定要清空全部缓存吗？\n将删除本页保存的源代码、所有语言的转换结果和 AI 微调对话记录，此操作不可恢复。')) return;
+
+  sourceCache = {};
+  convertCache = {};
+  chatCache = {};
+  aiCodeByLang = {};
+  saveAiCodes();
+  ['cv_sources', 'cv_codes', 'cv_chats', 'cv_source_lang', 'cv_view_lang', 'cv_fp', 'cv_sol_fp', 'cv_confirmed', 'cv_ai_codes']
+    .forEach(k => localStorage.removeItem(k));
+
+  sourceLang = 'python';
+  currentLang = '';
+  rawCode = '';
+  syncSourceButtons();
+  $('sourceCode').value = '';
+  showCodeEmpty('粘贴源代码后，点击下方按钮转换为目标语言');
+  renderConvertBar();
+  renderChat();
+  updateStats();
+  showToast('缓存已清空，可以开始新题目的转换');
+}
+
+function syncSourceButtons() {
+  document.querySelectorAll('#srcLangGrid .lang-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.lang === sourceLang);
+  });
+}
+
+function selectSourceLang(btn) {
+  // 切换前保存当前编辑内容
+  sourceCache[sourceLang] = $('sourceCode').value;
+  saveSources();
+  sourceLang = btn.dataset.lang;
+  localStorage.setItem('cv_source_lang', sourceLang);
+  syncSourceButtons();
+  loadSourceForLang(sourceLang);
+  renderConvertBar();
+  updateStats();
+}
+
+// 载入源代码：仅恢复本页编辑缓存；题解代码通过「导入已生成代码」按钮手动导入
+function loadSourceForLang(lang) {
+  $('sourceCode').value = sourceCache[lang] || '';
+}
+
+function updateStats() {
+  $('sourceStats').textContent = $('sourceCode').value.length + ' 字符';
+}
+$('sourceCode').addEventListener('input', () => {
+  sourceCache[sourceLang] = $('sourceCode').value;
+  saveSources();
+  // 源代码变更不再清空已转换结果，仅刷新 ⚠ 过期标记（首次出现过期时提示一次）
+  const staleNow = Object.keys(convertCache).some(l => l !== sourceLang && isStale(l));
+  if (staleNow && !staleNotified) {
+    staleNotified = true;
+    showToast('源代码已变更，已转换结果保留但可能过期（标 ⚠），可点击「重新生成当前语言」更新');
+  }
+  if (!staleNow) staleNotified = false;
+  renderConvertBar();
+  updateStats();
+});
+let staleNotified = false;
+
+/* ===== 语法高亮 ===== */
+
+
+
+function renderCode(code) {
+  rawCode = code;
+  const highlighted = highlightCode(code, currentLang);
+  const lines = highlighted.split('\n');
+  $('codeContent').innerHTML = lines
+    .map(l => '<div class="cl"><span class="lc">' + (l || ' ') + '</span></div>')
+    .join('');
+  $('codeEmpty').classList.add('hidden');
+  $('codeContent').classList.remove('hidden');
+  $('codeLangLabel').textContent = LANG_CONFIG[currentLang].name;
+  $('lineStats').textContent = code.split('\n').length + ' 行';
+  $('charStats').textContent = code.length + ' 字符';
+  renderConvertBar();
+  renderChat();
+  renderConfirmBar();
+}
+
+function showCodeEmpty(hint) {
+  rawCode = '';
+  $('codeContent').classList.add('hidden');
+  $('codeEmpty').classList.remove('hidden');
+  if (hint) $('codeEmptyHint').textContent = hint;
+  $('codeLangLabel').textContent = '-';
+  $('lineStats').textContent = '0 行';
+  $('charStats').textContent = '0 字符';
+  renderConfirmBar();   // 无代码时移除确认条
+}
+
+function renderConvertBar() {
+  const wrap = $('convertBtns');
+  wrap.innerHTML = '';
+  Object.keys(LANG_CONFIG).forEach(lang => {
+    if (lang === sourceLang) return;
+    const b = document.createElement('button');
+    b.className = 'convert-btn';
+    b.dataset.lang = lang;
+    const stale = convertCache[lang] && isStale(lang);
+    b.textContent = LANG_CONFIG[lang].name + (convertCache[lang] ? (stale ? ' ⚠' : ' ✓') : '');
+    b.title = !convertCache[lang] ? '转换为此语言'
+      : stale ? '已生成（源代码此后有变更，结果可能过期；点击查看，或点「重新生成当前语言」更新）'
+      : '已生成，点击查看缓存';
+    b.onclick = () => {
+      if (convertCache[lang] && lang === currentLang) return;
+      if (convertCache[lang]) { currentLang = lang; localStorage.setItem('cv_view_lang', lang); renderCode(convertCache[lang]); return; }
+      convertTo(lang);
+    };
+    wrap.appendChild(b);
+  });
+  $('convertBar').classList.remove('hidden');
+}
+
+// 去除模型返回中的 markdown 代码块围栏（兼容 CRLF 换行、大小写语言标记与行内空白）
+
+// 从 API 响应中安全提取代码内容：校验空响应、剥围栏、提示长度截断
+
+// 带自动续写的代码请求：复用 common.js 的 fetchWithContinuation（截断自动续写、
+// 空内容明确报错），再剥离 markdown 围栏
+async function fetchCodeWithContinuation(apiCfg, messages, opts) {
+  const text = await fetchWithContinuation(apiCfg, messages, opts);
+  const clean = stripCodeFences(text);
+  if (!clean) throw new Error('模型返回了空内容，请重试');
+  return clean;
+}
+
+/* ===== C 语言生成质量保障：专项提示词 + 本地静态检查 + 自动修复闭环 ===== */
+
+// 剥离注释与字符串/字符字面量，避免静态检查被注释内容误伤
+function stripCCommentsAndStrings(code) {
+  return code
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/[^\n]*/g, '')
+    .replace(/"(?:[^"\\]|\\.)*"/g, '""')
+    .replace(/'(?:[^'\\]|\\.)*'/g, "''");
+}
+
+// C 代码本地静态检查：返回问题清单（空数组 = 通过）
+function validateCCode(code) {
+  const s = stripCCommentsAndStrings(code);
+  const issues = [];
+  if (/#\s*include\s*<bits\/stdc\+\+\.h>/.test(s)) issues.push('包含 C++ 专用头文件 bits/stdc++.h，C 中不可用');
+  if (/using\s+namespace\s+std/.test(s)) issues.push('包含 using namespace std，C 中不可用');
+  if (/\b(cin|cout|cerr|endl)\s*(<<?|>>?|\b)/.test(s) && /\b(cin|cout|cerr|endl)\b/.test(s)) issues.push('使用了 C++ 流式输入输出 cin/cout/endl，需改为 scanf/printf/fgets');
+  if (/\bstd::/.test(s)) issues.push('包含 std:: 前缀，C 中不可用');
+  if (/\b(vector|map|set|unordered_map|unordered_set|stack|queue|deque|list|pair)\s*</.test(s)) issues.push('使用了 C++ STL 容器模板（vector/map 等），需用数组或手写结构等价实现');
+  if (/\bstring\s+[A-Za-z_]/.test(s)) issues.push('使用了 C++ string 类，需改为 char 数组 + string.h');
+  if (/\bnew\s+[A-Za-z_]/.test(s) || /\bdelete\s+/.test(s)) issues.push('使用了 C++ new/delete，需改为 malloc/free');
+  if (/\bclass\s+[A-Za-z_]/.test(s)) issues.push('包含 class 定义，C 中不可用，需改为 struct + 函数');
+  if (/\bauto\s+[A-Za-z_]/.test(s)) issues.push('使用了 C++ auto 类型推导，C 中需显式类型');
+  if (!/\bint\s+main\s*\(/.test(s)) issues.push('缺少 ACM 模式入口 main 函数（输入读取与输出打印）');
+  if (!/以下内容为LeetCode核心代码模式转为ACM模式所需代码/.test(code))
+    issues.push('main 函数上方缺少两行固定注释（// 以下内容为LeetCode核心代码模式转为ACM模式所需代码 / // 请在algomooc oj上直接使用，在实际考试中无需编写）');
+  let bal = 0;
+  for (const ch of s) { if (ch === '{') bal++; else if (ch === '}') bal--; }
+  if (bal !== 0) issues.push('花括号不配平，代码可能被截断或不完整');
+  return issues;
+}
+
+// 目标为 C 时的专项转换约束（附加到转换提示词）
+// 刻意保持精简：冗长规则会让思考型模型在推理阶段耗尽 token（"思考太长"返回空内容）。
+// 详细规范由后置的 validateCCode 本地检查 + 自动修复闭环兜底，不占用首轮推理预算。
+const C_CONVERT_RULES = '\n\n目标语言为 C：请直接依照 C++ 的写法逐行等价翻译为 C，保持结构一一对应，不要额外设计。'
+  + '要点：仅用 stdio.h/stdlib.h/string.h；结构体用 typedef struct（字段蛇形命名）；'
+  + 'vector 返回值改为 malloc 数组 + int* out_count 出参；string 改 char 数组 + string.h；'
+  + '输入用 fgets（判 NULL、while 剥行尾 \\n/\\r）+ atoi/strtok 解析；输出用 printf；'
+  + 'main 正上方保留两行固定注释（// 以下内容为LeetCode核心代码模式转为ACM模式所需代码 / '
+  + '// 请在algomooc oj上直接使用，在实际考试中无需编写）；main 末尾 free 全部分配的内存。';
+
+// 目标为 Java 时的专项转换约束（精简，详细规范由后置校验+修复兜底）
+const JAVA_CONVERT_RULES = '\n\n目标语言为 Java：直接逐行等价翻译，保持结构对应。'
+  + '要点：ACM 模式完整可运行，含 public static void main(String[] args) 入口独立完成输入读取与输出打印；'
+  + '仅用 JDK 标准库；禁止残留 Python 语法（def、# 注释、print() 等）。';
+
+// Java 代码本地静态检查：返回问题清单（空数组 = 通过）
+function validateJavaCode(code) {
+  const s = code
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/[^\n]*/g, '')
+    .replace(/"(?:[^"\\]|\\.)*"/g, '""')
+    .replace(/'(?:[^'\\]|\\.)*'/g, "''");
+  const issues = [];
+  if (!/\bclass\s+[A-Za-z_]/.test(s)) issues.push('缺少 class 定义');
+  if (!/public\s+static\s+void\s+main\s*\(\s*String/.test(s))
+    issues.push('缺少 ACM 模式入口 main 方法（public static void main(String[] args)）');
+  if (/^\s*(def|elif)\s/m.test(s)) issues.push('残留 Python 语法（def/elif 关键字）');
+  if (/^\s*#(?!\s*(include|define|if|ifdef|ifndef|elif|else|endif|undef|pragma|error|line)\b)/m.test(s)) issues.push('残留 Python 风格 # 注释');
+  if (/(?<![.\w])print\s*\(/.test(s)) issues.push('残留 Python 风格 print() 调用，需改为 System.out.print/println');
+  let bal = 0;
+  for (const ch of s) { if (ch === '{') bal++; else if (ch === '}') bal--; }
+  if (bal !== 0) issues.push('花括号不配平，代码可能被截断或不完整');
+  return issues;
+}
+
+// 通用代码校验（JavaScript/Go/C++）：剥离注释与字符串后检查 Python 残留与括号配平
+function validateGenericCode(code) {
+  const s = code
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/[^\n]*/g, '')
+    .replace(/"(?:[^"\\]|\\.)*"/g, '""')
+    .replace(/'(?:[^'\\]|\\.)*'/g, "''")
+    .replace(/`(?:[^`\\]|\\.)*`/g, '``');
+  const issues = [];
+  if (/^\s*(def|elif)\s/m.test(s)) issues.push('残留 Python 语法（def/elif 关键字）');
+  if (/^\s*#(?!\s*(include|define|if|ifdef|ifndef|elif|else|endif|undef|pragma|error|line)\b)/m.test(s)) issues.push('残留 Python 风格 # 注释');
+  if (/(?<![.\w])print\s*\(/.test(s)) issues.push('残留 Python 风格 print() 调用');
+  let bal = 0;
+  for (const ch of s) { if (ch === '{') bal++; else if (ch === '}') bal--; }
+  if (bal !== 0) issues.push('花括号不配平，代码可能被截断或不完整');
+  return issues;
+}
+
+// 各目标语言的本地校验器（Python 转换结果无花括号语义，不做校验）
+const LANG_VALIDATORS = { c: validateCCode, java: validateJavaCode, javascript: validateGenericCode, go: validateGenericCode, cpp: validateGenericCode };
+
+async function apiConvert(code, fromLangKey, toLangKey) {
+  const apiCfg = getApiConfig();
+  const fromName = LANG_CONFIG[fromLangKey].name;
+  const toName = LANG_CONFIG[toLangKey].name;
+
+  let userContent = '请将以下 ' + fromName + ' 代码完整转换为 ' + toName + ' 代码。'
+    + '要求：保持解题逻辑、算法思路和中文注释不变，仅做语言层面的等价转换，'
+    + '仅输出转换后的代码，不要输出任何解释或 markdown 代码块标记。';
+  // 如果目标语言已有默认代码模板，要求沿用其输入输出框架
+  const tpl = templateCache[toLangKey];
+  if (tpl) {
+    userContent += '\n\n以下是 ' + toName + ' 的默认代码模板，转换后的代码必须沿用该模板的输入输出框架'
+      + '（入口函数、输入读取与解析、输出打印逻辑与模板保持一致）：\n' + tpl;
+  }
+  // 注入用户历史修正偏好（记忆功能开启且有 convert 规则时生效；附加 C/Java 规则之前）
+  userContent += getMemoryInject('convert');
+  if (toLangKey === 'c') userContent += C_CONVERT_RULES;
+  if (toLangKey === 'java') userContent += JAVA_CONVERT_RULES;
+  userContent += '\n\n源代码（' + fromName + '）：\n' + code;
+
+  // 全部目标语言统一加大 token 预算：思考型模型需要为推理预留空间，避免正文为空
+  const callOpts = { maxTokens: 16384 };
+  let result = await fetchCodeWithContinuation(apiCfg, [{ role: 'user', content: userContent }], callOpts);
+
+  // 本地静态检查 + 自动修复闭环（C/Java 专项校验，JS/Go/C++ 通用校验）
+  const validator = LANG_VALIDATORS[toLangKey] || null;
+  if (validator) {
+    const issues = validator(result);
+    if (issues.length) {
+      showToast('检测到 ' + toName + ' 代码存在 ' + issues.length + ' 处问题（' + issues[0] + ' 等），正在自动修复...');
+      const repairPrompt = '以下 ' + toName + ' 代码由 ' + fromName + ' 代码转换而来，但存在如下问题：\n'
+        + issues.map((s, i) => (i + 1) + '. ' + s).join('\n')
+        + '\n\n请修复上述全部问题，输出修复后完整、可编译运行的 ' + toName + ' 代码（含 ACM 模式入口与输入输出处理）。'
+        + '仅输出代码，不要输出任何解释或 markdown 代码块标记。\n\n待修复的代码：\n' + result;
+      try {
+        const fixed = await fetchCodeWithContinuation(apiCfg, [{ role: 'user', content: repairPrompt }], { maxTokens: 16384 });
+        const remaining = validator(fixed);
+        // 修复结果不劣于原结果才采用，防止越修越坏
+        if (remaining.length <= issues.length) {
+          result = fixed;
+          if (remaining.length) {
+            setTimeout(() => showToast('自动修复后仍有 ' + remaining.length + ' 处疑似问题：' + remaining.join('；'), true), 2800);
+          } else {
+            setTimeout(() => showToast(toName + ' 代码问题已自动修复'), 2800);
+          }
+        }
+      } catch (e) {
+        console.error(toName + ' 代码自动修复失败', e);
+        setTimeout(() => showToast('自动修复请求失败，保留原结果：' + e.message, true), 2800);
+      }
+    }
+  }
+  return result;
+}
+
+/* ===== 由题解代码生成默认代码模板：删除解题主干，保留输入输出框架 ===== */
+
+/* ===== 模板注释过滤：删除广告/题面信息类注释，保留参数说明类注释 ===== */
+// 命中保留规则的注释行绝不删除（优先于广告规则）
+const TEMPLATE_COMMENT_KEEP = [
+  /@param\b/, /@return\b/, /@throws\b/,
+  /类名、方法名、参数名已经指定/,
+  /以下内容为LeetCode核心代码模式转为ACM模式所需代码/,
+  /请在algomooc oj上直接使用/
+];
+// 广告与题面信息特征：欢迎语、网址、微信、题目/分值/作者/算法等
+const TEMPLATE_COMMENT_AD = [
+  /欢迎来到/, /欧弟算法/, /odalgo/i, /algomooc/i, /微信/, /刷题/, /题库/, /真题/,
+  /学员案例/, /面试指南/, /八股文/, /收录/, /群上提问/, /看不懂/,
+  /题目[：:]/, /分值[：:]/, /作者[：:]/, /算法[：:]/, /https?:\/\//
+];
+function isCommentLine(line) {
+  const t = line.trim();
+  return t.startsWith('#') || t.startsWith('//') || t.startsWith('/*') || t.startsWith('*') || t.startsWith('<!--');
+}
+function stripAdComments(code) {
+  return code.split('\n').filter(line => {
+    if (!isCommentLine(line)) return true;
+    if (TEMPLATE_COMMENT_KEEP.some(re => re.test(line))) return true;
+    return !TEMPLATE_COMMENT_AD.some(re => re.test(line));
+  }).join('\n').replace(/\n{3,}/g, '\n\n');
+}
+
+// 模板提取提示词：主干替换为默认返回，其余与题解逐字节保持一致
+function templateDerivePrompt(langKey, solCode) {
+  const langName = LANG_CONFIG[langKey].name;
+  let p = '以下是一份完整的 ' + langName + ' 题解代码。请从中提取对应的默认代码模板（供选手在此基础上填写解答），规则如下：'
+    + '\n1. 模板中只允许存在两类函数：①主干解题函数（被 main/入口直接调用的那个，如 solve / solution 等），'
+    + '②输入输出入口（main 函数 / Main 类 / if __name__ 块）。其余所有函数一律整体删除。'
+    + '\n2. 必须整体删除的内容：题解中自定义的辅助函数（如 dfs、bfs、check、isValid、campare/cmp、'
+    + '二分、回溯、预处理、构造链表/树等任何辅助函数），以及为解题服务的成员变量、实例字段、'
+    + '全局变量、常量与辅助数据结构（如 memo 记忆化字典、成本字段、状态缓存等）——'
+    + '连同函数头、函数体、声明与注释一起删除，不得保留空壳。'
+    + '\n3. 主干解题函数只保留函数头：函数体清空（留空即可），或仅写一行返回类型对应的零值占位'
+    + '（如 return 0 / return -1 / return null / return None / return "" / 空数组等）；'
+    + '原函数体中的全部实现、注释、对辅助函数与成员变量的引用一并删除。'
+    + '若函数体清空后类中不再引用某 import，该 import 仍原样保留，不要删。'
+    + '\n4. 保留内容必须与题解代码完全一致、逐字保留：所有 import/include、类与方法签名（含类型注解）、'
+    + '函数参数与返回值类型、输入读取与解析代码、输出打印代码、'
+    + '入口中对解题函数的调用与结果输出，以及原有注释。'
+    + '\n5. 不要新增、删除或改写任何输入输出行、主干函数头、类名、方法名、变量名——模板与题解的输入输出框架必须严格一致。'
+    + '\n6. 仅输出模板代码，不要输出任何解释或 markdown 代码块标记。';
+  if (langKey === 'c') {
+    p += '\n7. C 语言附加要求：模板只保留 typedef struct 类型定义、需要填充的解题函数头与 main 输入输出框架，'
+      + '不含任何解题实现与辅助函数（如排序比较函数）；'
+      + '解题函数体仅写占位默认返回（如 *out_count = 0; return NULL;）；'
+      + 'main 正上方的两行固定注释（// 以下内容为LeetCode核心代码模式转为ACM模式所需代码 / // 请在algomooc oj上直接使用，在实际考试中无需编写）原样保留；'
+      + '输入缓冲必须初始化（如 char buf[1024] = {0}），fgets 判 NULL 按空输入处理，'
+      + '去行尾换行用 while 循环同时兼容 \\n、\\r\\n 和纯 \\r，strtok 每段判 NULL；'
+      + 'malloc 分配的内存（含解题函数返回的结果数组）在 main 结束前 free；只允许 C 标准库，严禁任何 C++ 语法。';
+  }
+  if (langKey === 'javascript') {
+    p += '\n7. JavaScript 附加要求：'
+      + '辅助函数包括所有形态——function 声明、const/let 箭头函数（如 const dfs = (x) => {...}）、'
+      + '函数表达式，一律连同注释整体删除；为解题服务的顶层 const/let/var 变量、Map/Set 缓存、'
+      + '常量数组等也一并删除。'
+      + '若题解的解题逻辑直接写在顶层（没有 solve 之类的函数包裹），则将顶层计算语句全部删除，'
+      + '只保留输入读取（readline/require fs 等）与输出 console.log 的框架代码；'
+      + '若输入读取与输出之间的调用引用了已删除的函数，用对该主干函数的调用替换并保持输出语句不变。'
+      + '不要新增 module.exports 或改写任何输入读取方式。';
+  }
+  p += '\n\n题解代码（' + langName + '）：\n' + solCode;
+  p += getMemoryInject('template');   // 注入用户历史修正偏好（模板类规则）
+  return p;
+}
+
+// 从题解代码提取默认模板（C 语言同样走 静态检查+自动修复 闭环）
+async function apiDeriveTemplate(langKey, solCode) {
+  const apiCfg = getApiConfig();
+  let result = await fetchCodeWithContinuation(apiCfg,
+    [{ role: 'user', content: templateDerivePrompt(langKey, solCode) }],
+    langKey === 'c' ? { maxTokens: 16384 } : undefined);
+  result = stripAdComments(result);
+  if (langKey === 'c') {
+    const issues = validateCCode(result);
+    if (issues.length) {
+      const repairPrompt = '以下 C 代码模板存在如下问题：\n'
+        + issues.map((s, i) => (i + 1) + '. ' + s).join('\n')
+        + '\n\n请修复上述全部问题，输出修复后完整的 C 代码模板（仅含函数头与输入输出框架，不含解题实现）。'
+        + '仅输出代码，不要输出任何解释或 markdown 代码块标记。\n\n待修复的代码：\n' + result;
+      try {
+        const fixed = await fetchCodeWithContinuation(apiCfg, [{ role: 'user', content: repairPrompt }], { maxTokens: 16384 });
+        if (validateCCode(fixed).length <= issues.length) result = fixed;
+      } catch (e) { console.error('C 模板自动修复失败', e); }
+    }
+  }
+  return result;
+}
+
+// 带重试的模板提取：瞬时报错（限流/网络抖动）最多重试 2 次，间隔递增
+async function apiDeriveTemplateWithRetry(langKey, solCode) {
+  let lastErr = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await apiDeriveTemplate(langKey, solCode);
+    } catch (e) {
+      lastErr = e;
+      console.warn(langKey + ' 模板提取第 ' + (attempt + 1) + ' 次失败：' + e.message);
+      if (attempt < 2) await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+    }
+  }
+  throw lastErr;
+}
+
+// C 提取最终失败时的兜底：若 C++ 模板已提取成功，走「模板翻译」链路（含 C 专属规则与校验修复）
+async function deriveCTemplateFallback(ctCodes) {
+  const cppTpl = ctCodes['cpp'];
+  if (!cppTpl) return null;
+  const apiCfg = getApiConfig();
+  let userContent = '请将以下 C++ 代码模板转换为 C 代码模板。'
+    + '要求：输入读取与输出打印逻辑保持等价，函数头与 ACM 入口完整，不含解题实现（函数体保留默认返回零值）。'
+    + '仅保留主干解题函数与 main 入口，任何辅助函数（dfs、bfs、check、cmp 等）一律整体删除，不得保留或新增。'
+    + '仅输出转换后的代码，不要输出任何解释或 markdown 代码块标记。'
+    + C_CONVERT_RULES
+    + '\n\n源代码模板（C++）：\n' + cppTpl;
+  let result = await fetchCodeWithContinuation(apiCfg, [{ role: 'user', content: userContent }], { maxTokens: 16384 });
+  const issues = validateCCode(result);
+  if (issues.length) {
+    const repairPrompt = '以下 C 代码模板存在如下问题：\n'
+      + issues.map((s, i) => (i + 1) + '. ' + s).join('\n')
+      + '\n\n请修复上述全部问题，输出修复后完整的 C 代码模板（仅含函数头与输入输出框架，不含解题实现）。'
+      + '仅输出代码，不要输出任何解释或 markdown 代码块标记。\n\n待修复的代码：\n' + result;
+    try {
+      const fixed = await fetchCodeWithContinuation(apiCfg, [{ role: 'user', content: repairPrompt }], { maxTokens: 16384 });
+      if (validateCCode(fixed).length <= issues.length) result = fixed;
+    } catch (e) { console.error('C 模板兜底修复失败', e); }
+  }
+  return stripAdComments(result);
+}
+
+// 一键：确保六种语言都有题解代码（缺失的按依赖链补转），再并行提取默认模板写入模板页缓存
+async function deriveAllTemplates() {
+  const code = getSourceCode();
+  if (!code) return;
+  const apiCfg = getApiConfig();
+
+  const btn = $('deriveTplBtn');
+  const originalText = btn.textContent;
+  setConvertButtonsDisabled(true);
+  btn.disabled = true;
+  try {
+    // 第一步：补齐缺失语言的题解代码（复用依赖链波次并行）
+    const order = ['python', 'java', 'cpp', 'javascript', 'go', 'c'];
+    convertCache[sourceLang] = code;
+    const pending = order.filter(l => l !== sourceLang && !convertCache[l]);
+    const failedConvert = [];
+    while (pending.length) {
+      let wave = pending.filter(t => { const p = CONVERT_PARENT[t]; return !p || !pending.includes(p); });
+      if (!wave.length) wave = pending.slice();
+      btn.innerHTML = '<span class="loading"></span> 补齐题解 ' + wave.map(t => LANG_CONFIG[t].name).join('、');
+      await Promise.all(wave.map(async t => {
+        const parent = CONVERT_PARENT[t];
+        const srcKey = (parent && convertCache[parent]) ? parent : sourceLang;
+        try {
+          convertCache[t] = await apiConvert(convertCache[srcKey], srcKey, t);
+          saveConverts();
+          markLangFresh(t, sourceLang, code);
+          aiCodeByLang[t] = convertCache[t];
+          saveAiCodes();
+          markConfirmed(t, false);
+        } catch (e) { console.error(t, e); failedConvert.push(LANG_CONFIG[t].name); }
+        pending.splice(pending.indexOf(t), 1);
+      }));
+    }
+
+    // 第二步：并行提取各语言默认模板（带重试；C 失败再兜底用 C++ 模板翻译）
+    const langs = order.filter(l => convertCache[l]);
+    btn.innerHTML = '<span class="loading"></span> 提取默认模板 0/' + langs.length;
+    let done = 0;
+    const results = {};
+    const failedDerive = [];
+    await Promise.all(langs.map(async l => {
+      try {
+        results[l] = await apiDeriveTemplateWithRetry(l, convertCache[l]);
+      } catch (e) { console.error(l, e); failedDerive.push(LANG_CONFIG[l].name + '（' + e.message + '）'); }
+      done++;
+      btn.innerHTML = '<span class="loading"></span> 提取默认模板 ' + done + '/' + langs.length;
+    }));
+    // C 兜底：提取重试仍失败时，用已提取的 C++ 模板翻译为 C 模板
+    if (langs.includes('c') && !results['c'] && results['cpp']) {
+      btn.innerHTML = '<span class="loading"></span> C 模板兜底转换中';
+      try {
+        results['c'] = await deriveCTemplateFallback(results);
+        const fi = failedDerive.findIndex(s => s.startsWith('C（'));
+        if (fi >= 0) failedDerive.splice(fi, 1);
+        showToast('C 模板已通过 C++ 模板兜底转换完成');
+      } catch (e) {
+        console.error('C 模板兜底失败', e);
+        failedDerive.push('C（兜底转换也失败：' + e.message + '）');
+      }
+    }
+
+    // 第三步：写入模板页缓存（ct_codes），并记录派生来源指纹（ct_derived），
+    // 使模板页的"输入变更自动清缓存"不会误删这些与题解绑定的模板
+    let ctCodes = {};
+    try { ctCodes = JSON.parse(localStorage.getItem('ct_codes') || '{}'); } catch (e) {}
+    let derived = {};
+    try { derived = JSON.parse(localStorage.getItem('ct_derived') || '{}'); } catch (e) {}
+    Object.keys(results).forEach(l => {
+      ctCodes[l] = results[l];
+      derived[l] = sourceFingerprint(convertCache[l], l);
+      templateCache[l] = results[l];
+    });
+    localStorage.setItem('ct_codes', JSON.stringify(ctCodes));
+    localStorage.setItem('ct_derived', JSON.stringify(derived));
+    renderConvertBar();
+
+    if (failedConvert.length || failedDerive.length) {
+      showToast('模板已生成，但部分环节失败：'
+        + (failedConvert.length ? '补齐题解失败 ' + failedConvert.join('、') + '；' : '')
+        + (failedDerive.length ? '模板提取失败 ' + failedDerive.join('、') : ''), true);
+    } else {
+      showToast('已生成全部 ' + langs.length + ' 种语言的默认模板（与题解输入输出一致），可到「代码模板生成」页查看微调');
+    }
+  } finally {
+    setConvertButtonsDisabled(false);
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+// 仅提取一种语言的默认模板：默认作用于当前查看的结果语言；未查看结果时作用于源代码语言
+async function deriveCurrentTemplate() {
+  const lang = currentLang || sourceLang;
+  const solCode = currentLang ? rawCode : getSourceCode();
+  if (!solCode) { showToast('请先转换或选择一种语言'); return; }
+  const apiCfg = getApiConfig();
+
+  const btn = $('deriveOneBtn');
+  const originalText = btn.textContent;
+  setConvertButtonsDisabled(true);
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading"></span> 提取 ' + LANG_CONFIG[lang].name + ' 模板';
+  try {
+    let tpl;
+    try {
+      tpl = await apiDeriveTemplateWithRetry(lang, solCode);
+    } catch (e) {
+      // C 兜底：用已有的 C++ 模板翻译
+      if (lang === 'c') {
+        let ctCodes0 = {};
+        try { ctCodes0 = JSON.parse(localStorage.getItem('ct_codes') || '{}'); } catch (e2) {}
+        if (ctCodes0['cpp']) tpl = await deriveCTemplateFallback(ctCodes0);
+      }
+      if (!tpl) throw e;
+    }
+    // 只更新该语言，其余语言模板原样保留
+    let ctCodes = {};
+    try { ctCodes = JSON.parse(localStorage.getItem('ct_codes') || '{}'); } catch (e) {}
+    let derived = {};
+    try { derived = JSON.parse(localStorage.getItem('ct_derived') || '{}'); } catch (e) {}
+    ctCodes[lang] = tpl;
+    derived[lang] = sourceFingerprint(solCode, lang);
+    templateCache[lang] = tpl;
+    localStorage.setItem('ct_codes', JSON.stringify(ctCodes));
+    localStorage.setItem('ct_derived', JSON.stringify(derived));
+    showToast(LANG_CONFIG[lang].name + ' 默认模板已重新提取（可到「代码模板生成」页查看）');
+    showTemplateConfirmBar(lang, tpl);   // 模板提取结果接确认条（feature='template'）
+  } catch (e) {
+    console.error(e);
+    showToast(LANG_CONFIG[lang].name + ' 模板提取失败：' + e.message, true);
+  } finally {
+    setConvertButtonsDisabled(false);
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+function setConvertButtonsDisabled(disabled) {
+  document.querySelectorAll('.convert-btn').forEach(b => b.disabled = disabled);
+  $('genAllBtn').disabled = disabled;
+  $('regenBtn').disabled = disabled;
+  const d = $('deriveOneBtn'); if (d) d.disabled = disabled;
+  const da = $('deriveTplBtn'); if (da && !da.querySelector('.loading')) da.disabled = disabled;
+}
+
+// 重新生成当前查看的语言（忽略缓存，从源代码重新转换）
+async function regenerateCurrent() {
+  if (!currentLang || !rawCode) { showToast('请先转换或选择一种语言'); return; }
+  const code = getSourceCode();
+  if (!code) return;
+  const btn = $('regenBtn');
+  const originalText = btn.textContent;
+  setConvertButtonsDisabled(true);
+  btn.innerHTML = '<span class="loading"></span> 重新生成中';
+  try {
+    const cleanCode = await apiConvert(code, sourceLang, currentLang);
+    convertCache[currentLang] = cleanCode;
+    saveConverts();
+    markLangFresh(currentLang, sourceLang, code);
+    aiCodeByLang[currentLang] = cleanCode; saveAiCodes();
+    markConfirmed(currentLang, false);
+    renderCode(cleanCode);
+    showToast('已重新生成 ' + LANG_CONFIG[currentLang].name + ' 代码');
+  } catch (e) {
+    showToast('错误: ' + e.message, true);
+    console.error(e);
+  } finally {
+    setConvertButtonsDisabled(false);
+    btn.textContent = originalText;
+  }
+}
+
+function getSourceCode() {
+  const code = $('sourceCode').value.trim();
+  if (!code) { showToast('请先粘贴源代码'); return null; }
+  sourceCache[sourceLang] = code;
+  saveSources();
+  return code;
+}
+
+/* ===== 过期标记：转换结果永久保留，仅标记生成后源代码是否有变更 ===== */
+// 源代码指纹（双哈希 + 长度，避免存储完整副本）
+function sourceFingerprint(code, lang) {
+  const s = lang + '\n' + code;
+  let h1 = 5381, h2 = 52711;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    h1 = ((h1 * 33) ^ c) >>> 0;
+    h2 = ((h2 * 31) ^ c) >>> 0;
+  }
+  return s.length + ':' + h1.toString(36) + ':' + h2.toString(36);
+}
+
+// cv_fp 结构：{ lang: { fp, srcLang } } —— 每个语言的转换结果各自记录
+// 生成时所用根源代码（用户源代码，而非依赖链中间结果）的指纹与语言
+function getFpStore() {
+  try { return JSON.parse(localStorage.getItem('cv_fp') || '{}'); } catch (e) { return {}; }
+}
+
+// 每次生成/重新生成某语言结果后调用：绑定当前根源代码
+function markLangFresh(lang, srcLang, srcCode) {
+  const store = getFpStore();
+  store[lang] = { fp: sourceFingerprint(srcCode, srcLang), srcLang };
+  localStorage.setItem('cv_fp', JSON.stringify(store));
+}
+
+// 某语言的转换结果是否可能过期：生成时的根源代码与当前内容不一致
+// （比对 sourceCache 中对应语言的保存内容，切换源代码语言下拉框不会误判）
+function isStale(lang) {
+  if (!convertCache[lang] || lang === sourceLang) return false;
+  const g = getFpStore()[lang];
+  if (!g || !g.srcLang) return false; // 无指纹的旧缓存不贸然标记，直接保留
+  const nowCode = sourceCache[g.srcLang] || '';
+  return sourceFingerprint(nowCode, g.srcLang) !== g.fp;
+}
+
+// 一键转换全部时是否需要转换该语言：未转换 / 已过期 / 来源与当前源代码不一致
+function needsConvert(lang) {
+  if (!convertCache[lang]) return true;
+  if (isStale(lang)) return true;
+  const g = getFpStore()[lang];
+  if (!g || !g.srcLang) return true;  // 无指纹的旧缓存来源不明，一并更新
+  return g.srcLang !== sourceLang;
+}
+
+async function convertTo(targetLang) {
+  const code = getSourceCode();
+  if (!code) return;
+  const toName = LANG_CONFIG[targetLang].name;
+  const btn = document.querySelector('.convert-btn[data-lang="' + targetLang + '"]');
+  const originalText = btn.textContent;
+  setConvertButtonsDisabled(true);
+  btn.innerHTML = '<span class="loading"></span> 转换中';
+  try {
+    const cleanCode = await apiConvert(code, sourceLang, targetLang);
+    convertCache[targetLang] = cleanCode;
+    saveConverts();
+    markLangFresh(targetLang, sourceLang, code);
+    aiCodeByLang[targetLang] = cleanCode; saveAiCodes();   // 记录 AI 原始输出快照（确认条 diff 基准）
+    markConfirmed(targetLang, false);       // 重新转换后需重新确认
+    currentLang = targetLang;
+    localStorage.setItem('cv_view_lang', targetLang);
+    renderCode(cleanCode);
+    showToast('已转换为 ' + toName);
+  } catch (e) {
+    showToast('错误: ' + e.message, true);
+    console.error(e);
+  } finally {
+    setConvertButtonsDisabled(false);
+    if (btn.isConnected) btn.textContent = originalText;
+  }
+}
+
+// 一键转换全部：按依赖链 Python→Java/C++，Java→JS/Go，C++→C 分波次并行转换
+// 同一波内父语言已就绪的目标语言并发请求，5 次串行调用压缩为最多 2~3 波
+async function convertAll() {
+  const code = getSourceCode();
+  if (!code) return;
+  convertCache[sourceLang] = code;
+
+  const order = ['python', 'java', 'cpp', 'javascript', 'go', 'c'];
+  // 未转换 / 已过期（源代码此后有变更）/ 来源语言不一致 的语言都会重新转换；✓ 新鲜缓存跳过以节省调用
+  const allTargets = order.filter(l => l !== sourceLang && needsConvert(l));
+  const pending = allTargets.slice();
+  if (!pending.length) { showToast('所有语言均已转换且为最新，点击语言按钮即可查看'); return; }
+
+  const btn = $('genAllBtn');
+  const originalText = btn.textContent;
+  setConvertButtonsDisabled(true);
+  const failed = [];
+  const total = pending.length;
+  let done = 0;
+  try {
+    while (pending.length) {
+      // 本波可转：无父语言依赖，或父语言不在待转集合中（已缓存 / 是源语言 / 已尝试过）
+      let wave = pending.filter(t => {
+        const p = CONVERT_PARENT[t];
+        return !p || !pending.includes(p);
+      });
+      if (!wave.length) wave = pending.slice(); // 兜底防死循环（依赖异常时全量并发）
+      btn.innerHTML = '<span class="loading"></span> 并行转换中 '
+        + wave.map(t => LANG_CONFIG[t].name).join('、')
+        + ' (' + done + '/' + total + ')';
+      await Promise.all(wave.map(async t => {
+        const parent = CONVERT_PARENT[t];
+        const srcKey = (parent && convertCache[parent]) ? parent : sourceLang;
+        try {
+          convertCache[t] = await apiConvert(convertCache[srcKey], srcKey, t);
+          saveConverts();
+          markLangFresh(t, sourceLang, code);
+          aiCodeByLang[t] = convertCache[t];
+          saveAiCodes();   // 每种语言各自记录快照，确认条跟随当前查看语言刷新
+          markConfirmed(t, false);
+        } catch (e) {
+          console.error(t, e);
+          failed.push(LANG_CONFIG[t].name);
+        }
+        pending.splice(pending.indexOf(t), 1);
+        done++;
+      }));
+    }
+  } finally {
+    setConvertButtonsDisabled(false);
+    btn.textContent = originalText;
+  }
+  renderConvertBar();
+  if (failed.length) showToast('部分语言转换失败：' + failed.join('、'), true);
+  else {
+    showToast('全部语言已转换完成');
+    // 自动展示第一个新转换的结果
+    const first = allTargets.find(t => convertCache[t]);
+    if (first) { currentLang = first; localStorage.setItem('cv_view_lang', first); renderCode(convertCache[first]); }
+  }
+}
+
+
+/* ===== AI 对话微调当前语言代码 ===== */
+function saveChats() { localStorage.setItem('cv_chats', JSON.stringify(chatCache)); }
+
+function renderChat() {
+  const box = $('chatMessages');
+  if (!box) return;
+  $('chatLangTag').textContent = currentLang ? LANG_CONFIG[currentLang].name : '-';
+  const history = (currentLang && chatCache[currentLang]) || [];
+  box.innerHTML = '';
+  const hint = document.createElement('div');
+  hint.className = 'chat-msg assistant';
+  hint.textContent = rawCode
+    ? '用自然语言描述修改要求，例如「给关键步骤加注释」「改用更高效的写法」，修改将应用到当前 ' + LANG_CONFIG[currentLang].name + ' 代码。'
+    : '请先转换出目标语言代码，然后再用指令微调。';
+  box.appendChild(hint);
+  history.forEach(m => {
+    const d = document.createElement('div');
+    d.className = 'chat-msg ' + (m.role === 'user' ? 'user' : 'assistant');
+    d.textContent = m.role === 'user' ? m.content : m.summary;
+    box.appendChild(d);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+async function sendChat() {
+  const input = $('chatInput');
+  const instruction = input.value.trim();
+  if (!instruction) return;
+  if (!rawCode || !currentLang) { showToast('请先转换出代码'); return; }
+  const apiCfg = getApiConfig();
+
+  input.value = '';
+  if (!chatCache[currentLang]) chatCache[currentLang] = [];
+  const history = chatCache[currentLang];
+  history.push({ role: 'user', content: instruction });
+  renderChat();
+
+  const sendBtn = $('chatSendBtn');
+  const originalText = sendBtn.textContent;
+  sendBtn.disabled = true;
+  sendBtn.innerHTML = '<span class="loading"></span>';
+
+  try {
+    const langName = LANG_CONFIG[currentLang].name;
+    const apiMessages = [];
+    history.slice(0, -1).forEach(m => apiMessages.push({ role: m.role, content: m.content }));
+    apiMessages.push({
+      role: 'user',
+      content: '以下是当前的 ' + langName + ' 代码：\n' + rawCode
+        + '\n\n请根据以下指令修改代码，保持原有解题逻辑和中文注释，'
+        + '仅输出修改后的完整代码，不要输出任何解释或 markdown 代码块标记：\n' + instruction
+    });
+
+    const cleanCode = await fetchCodeWithContinuation(apiCfg, apiMessages);
+
+    convertCache[currentLang] = cleanCode;
+    saveConverts();
+    aiCodeByLang[currentLang] = cleanCode; saveAiCodes();   // 微调输出为新的 diff 基准
+    markConfirmed(currentLang, false);
+    renderCode(cleanCode);
+    history.push({ role: 'assistant', content: cleanCode, summary: '已根据指令更新代码（' + cleanCode.split('\n').length + ' 行）' });
+    if (history.length > 20) chatCache[currentLang] = history.slice(-20);
+    saveChats();
+    renderChat();
+    showToast('代码已按指令更新');
+  } catch (e) {
+    history.pop();
+    renderChat();
+    showToast('错误: ' + e.message, true);
+    console.error(e);
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.textContent = originalText;
+  }
+}
+
+function clearChat() {
+  if (!currentLang) return;
+  chatCache[currentLang] = [];
+  saveChats();
+  renderChat();
+  showToast('已清空当前语言的对话记录');
+}
+
+function copyResult() {
+  if (!rawCode) { showToast('没有内容可复制'); return; }
+  copyText(rawCode, '已复制到剪贴板', () => {
+    const btn = $('copyIconBtn');
+    btn.classList.add('copied');
+    setTimeout(() => btn.classList.remove('copied'), 1200);
+  });
+}
+
+function downloadResult() {
+  if (!rawCode) { showToast('没有内容可下载'); return; }
+  const ext = LANG_CONFIG[currentLang].ext;
+  const blob = new Blob([rawCode], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'solution.' + ext;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('已下载 solution.' + ext);
+}
+
+init();
+</script>
+</body>
+</html>

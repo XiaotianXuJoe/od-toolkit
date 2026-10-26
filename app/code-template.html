@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>代码模板生成器</title>
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>代码模板生成器</h1>
+    <p>基于大模型 API，从已清理的题目描述中生成各语言的默认代码模板</p>
+  </header>
+
+  <div class="nav-bar">
+    <a href="index.html">文本乱码清理</a>
+    <a class="active" href="code-template.html">代码模板生成</a>
+    <a href="solution.html">题解代码生成</a>
+    <a href="convert.html">代码语言转换</a>
+    <a href="explanation.html">题解说明生成</a>
+    <a href="csdn.html">CSDN 发布</a>
+    <a href="style.html">风格学习</a>
+    <a href="memory.html">记忆中心</a>
+    <button class="nav-settings" onclick="openSettings()" title="API 设置">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+
+
+  <div class="card">
+    <div class="card-title collapsible collapsed" onclick="toggleCollapse(this, 'promptArea')">系统提示词（点击展开/折叠）</div>
+    <div id="promptArea" class="collapse-content collapsed">
+      <div class="hint-box">提示词中可用占位符：<code>{lang}</code> 会被替换为当前选择的语言名称。你可以根据记忆空间中的规范要求自定义模板格式。</div>
+      <textarea id="systemPrompt" style="min-height:160px; font-size:13px;"></textarea>
+      <div class="btn-group" style="margin-top:8px;">
+        <button class="btn btn-secondary" onclick="resetPrompt('ct_prompt')">恢复默认</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title"><span class="icon">1</span>题目描述（已清理的 Markdown）</div>
+      <textarea id="inputText" placeholder="在此粘贴已清理的题目描述文本...&#10;&#10;可点击「导入已清理文本」导入「文本乱码清理」页的结果。"></textarea>
+      <div class="input-tools">
+        <button class="btn btn-secondary" onclick="importCleanedText('inputText')">导入已清理文本</button>
+        <button class="btn btn-secondary" onclick="clearInputValue('inputText', '题目描述')">删除输入内容</button>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-secondary" onclick="loadDemo()">加载示例</button>
+      </div>
+      <div class="stats">
+        <span class="stat-badge" id="inputStats">输入 0 字符</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="icon">2</span>选择语言</div>
+      <div class="lang-grid" id="langGrid">
+        <button class="lang-btn active" data-lang="python" onclick="selectLang(this)">Python</button>
+        <button class="lang-btn" data-lang="java" onclick="selectLang(this)">Java</button>
+        <button class="lang-btn" data-lang="cpp" onclick="selectLang(this)">C++</button>
+        <button class="lang-btn" data-lang="c" onclick="selectLang(this)">C</button>
+        <button class="lang-btn" data-lang="javascript" onclick="selectLang(this)">JavaScript</button>
+        <button class="lang-btn" data-lang="go" onclick="selectLang(this)">Go</button>
+      </div>
+      <div class="field">
+        <label>自定义类名 / 函数名（可选）</label>
+        <input type="text" id="customName" placeholder="Solution">
+        <div class="input-tools">
+          <button class="btn btn-secondary" onclick="clearInputValue('customName', '自定义类名')">删除输入内容</button>
+        </div>
+      </div>
+      <div class="btn-group" style="margin-top:4px;">
+        <button class="btn btn-primary" id="genBtn" onclick="generateTemplate()">
+          <span id="btnText">生成代码模板</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">3</span>生成的代码模板</div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('code', this)">代码</button>
+      <button class="tab" onclick="switchTab('explain', this)">说明</button>
+    </div>
+
+    <div class="code-window" id="codeWindow">
+      <div class="code-header">
+        <span class="code-dots"><i></i><i></i><i></i></span>
+        <span class="code-lang" id="codeLangLabel">Python</span>
+        <button class="copy-icon" id="copyIconBtn" onclick="copyResult()" title="复制代码">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+      </div>
+      <div class="code-body">
+        <div class="code-empty" id="codeEmpty">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          <div class="empty-title">生成的代码将显示在这里</div>
+          <div class="empty-hint" id="codeEmptyHint">选择语言并点击「生成代码模板」</div>
+        </div>
+        <pre class="code-content hidden" id="codeContent"></pre>
+      </div>
+    </div>
+    <div id="confirmSlot"></div>
+
+    <div id="explainOutput" class="explain-panel hidden">生成说明将显示在这里...</div>
+
+    <div class="convert-bar hidden" id="convertBar">
+      <span class="convert-label">一键转换为</span>
+      <div class="convert-btns" id="convertBtns"></div>
+      <div style="margin-left:auto; display:flex; gap:8px;">
+        <button class="btn btn-secondary convert-all-btn" style="margin-left:0;" id="regenBtn" onclick="regenerateCurrent()">重新生成当前语言</button>
+        <button class="btn btn-primary convert-all-btn" style="margin-left:0;" id="genAllBtn" onclick="generateAll()">一键生成全部语言</button>
+      </div>
+    </div>
+
+    <div class="chat-panel">
+      <div class="chat-header">
+        <span>AI 微调代码<span class="chat-lang-tag" id="chatLangTag">Python</span></span>
+        <button class="chat-clear" onclick="clearChat()">清空对话</button>
+      </div>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="输入修改指令，如「把输入改为多组数据读取」，回车发送..."
+               onkeydown="if(event.key==='Enter'&&!event.isComposing)sendChat()">
+        <button class="btn btn-primary chat-send" id="chatSendBtn" onclick="sendChat()">发送</button>
+      </div>
+    </div>
+
+    <div class="btn-group" style="margin-top:12px;">
+      <button class="btn btn-secondary" onclick="copyResult()">复制代码</button>
+      <button class="btn btn-secondary" onclick="downloadResult()">下载代码文件</button>
+      <button class="btn btn-danger" style="margin-left:auto;" onclick="clearAllCache()">清空全部缓存</button>
+    </div>
+    <div class="stats">
+      <span class="stat-badge" id="lineStats">0 行</span>
+      <span class="stat-badge" id="charStats">0 字符</span>
+    </div>
+  </div>
+</div>
+
+
+<div class="settings-overlay hidden" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+  <div class="settings-panel">
+    <div class="settings-header">
+      <span>API 设置</span>
+      <button class="settings-close" onclick="closeSettings()" title="关闭">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="warning-box">API Key 可留空：留空时自动使用服务器内置 Key，打开即用。填写自己的 Key 则仅存储在浏览器本地，直连失败时自动改经本服务器同源中转转发（服务器不存储你的 Key）。所有功能页面共享此配置，只需设置一次。</div>
+    <div class="field">
+      <label>API Key</label>
+      <input type="password" id="cfgApiKey" placeholder="留空则使用服务器内置 Key" autocomplete="off">
+      <small>留空 = 使用服务器内置 Key（推荐）；自带 Key 时才会用到下方 Base URL 直连</small>
+    </div>
+    <div class="field">
+      <label>Base URL</label>
+      <input type="text" id="cfgBaseUrl" placeholder="https://api.moonshot.cn/v1" value="https://api.moonshot.cn/v1">
+    </div>
+    <div class="field">
+      <label>模型</label>
+      <input type="text" id="cfgModel" placeholder="kimi-k2.6" value="kimi-k2.6">
+    </div>
+    <div class="field">
+      <label>Temperature</label>
+      <input type="number" id="cfgTemperature" placeholder="0.6" value="0.6" min="0" max="2" step="0.1">
+      <small>kimi-k2.6 非思考模式必须设为 0.6，否则 API 报错</small>
+    </div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="cfgDisableThinking" checked style="width:auto;"> 关闭模型思考（显著提速，推荐）</label>
+      <small>思考型模型（如 kimi-k2.6）推理耗时很长，可能超时或耗尽输出预算；关闭后响应更快更稳。若所用端点不支持该参数会自动回退，不影响使用。</small>
+    </div>
+    <div class="field">
+      <label>同步密钥（可选）</label>
+      <input type="password" id="cfgSyncToken" placeholder="服务器设置了 SYNC_TOKEN 时填写" autocomplete="off">
+      <small>仅用于 API 中转鉴权（服务器设了 SYNC_TOKEN 时填写）；风格数据同步免密，无需为此填写</small>
+    </div>
+    <div class="btn-group" style="margin-top:4px;">
+      <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
+      <button class="btn btn-secondary" onclick="testConnection()">测试连接</button>
+      <button class="btn btn-secondary" onclick="loadSettings()">恢复已保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">已复制到剪贴板</div>
+
+<script src="common.js"></script>
+<script>
+DEFAULT_PROMPT=`你是一位专业的算法竞赛代码模板生成专家。你的任务是根据已清理的题目描述，生成规范、完整的 {lang} 代码模板，供选手在编程题平台上直接提交或在此基础上编写解答。
+
+## 生成规范
+
+### 1. 代码结构要求
+- 必须包含完整的类/函数定义，符合 {lang} 的语法规范
+- 必须包含正确的方法签名，参数类型和返回值类型需从题目描述中推断
+- 方法名使用题目中给出的名称，如未给出则使用通用名称（如 solve、main、process）
+- 类名优先使用用户指定的名称，未指定时使用平台默认值（如 Solution、Main）
+
+### 2. Solution 类/结构体规范
+- Solution 类/结构体只能包含题目框架自带的函数签名，不能包含用户自己额外定义的成员变量（如 ans、numEmpty、numWifi 等），也不能包含任何辅助函数或数据结构的实现
+
+### 3. C 语言模板特殊规范
+- 只包含 typedef struct 类型定义、需要填充的解题函数头和 main 输入输出框架，不能包含任何解题实现与辅助函数（如排序比较函数）
+- 复合数据类型用 typedef struct { ... } TypeName; 定义，字段蛇形命名（如 room_id、store_time），置于所有函数之前
+- 解题函数返回指针类型（如 Result*），结果数量用指针出参（如 int* out_count）；函数体仅写占位默认返回（如 *out_count = 0; return NULL;）
+- main 正上方原样保留两行固定注释：// 以下内容为LeetCode核心代码模式转为ACM模式所需代码 与 // 请在algomooc oj上直接使用，在实际考试中无需编写
+- 输入缓冲必须初始化（如 char buf[1024] = {0}）；用 fgets(buf, sizeof(buf), stdin) 逐行读取并判 NULL（失败按空输入处理）
+- 每行读入后用 while 循环剥掉行尾换行，同时兼容 \n、\r\n 和纯 \r
+- 整数解析用 atoi；逗号分隔字段用 strtok(buf, ",") 逐段解析且每段判 NULL
+- 记录数组用 malloc 分配，main 结束前 free 所有分配的内存（包括解题函数返回的结果数组）
+- 输出用 printf，格式串与题目输出描述完全一致
+- 空字符串输入时 fgets 可能返回 NULL 或读取到换行符，两种情况都要正确处理
+
+### 4. 注释规范
+- 不包含题目信息注释（如"欢迎来到欧弟算法"、网站地址、微信号、题目分值、作者、算法等）
+- 函数参数解释注释（如"代码中的类名、方法名、参数名已经指定"、"@param"、"@return"等）放在 Solution 类外面、紧挨着的上方
+- Solution 类内部不添加任何注释
+- Main 类/入口函数中不添加任何注释，仅在前面保留固定格式注释：
+  - Java/C++：// 以下内容为LeetCode核心代码模式转为ACM模式所需代码  // 请在algomooc oj上直接使用，在实际考试中无需编写
+  - Python：# 以下内容为LeetCode核心代码模式转为ACM模式所需代码  # 请在algomooc oj上直接使用，在实际考试中无需编写
+
+### 5. 题解代码完整性
+- 执行指令1时，Java 和 C++ 的题解代码（转化后的完整可运行代码）必须包含 ACM 模式的入口代码（main 函数/类），不能只提供 Solution 类
+
+### 6. 其他
+- 即使存在输入输出错误修复，也不要在修复代码中增加任何注释
+- Python 默认代码模板中，方法必须包含完整的类型注解（如 root: Node, threshold: int -> List[int]），顶部需导入 from typing import List
+
+### 7. 默认实现
+- 方法体内提供一个默认的 return 语句，返回类型对应的零值或合理默认值
+- 对于 void / 无返回值类型，方法体可为空或仅含 pass / return 等占位符
+- 不要编写完整的解题逻辑，只提供模板框架
+
+### 8. 输入输出处理（必须实现）
+- 生成的代码模板必须包含完整的输入读取和输出打印语句，不允许只给函数签名
+- 输入读取逻辑必须根据题目描述中的「输入描述」来实现：逐个解析输入描述中说明的每个参数（如整数 n、数组 tiles、字符串 s 等），按其格式（单行、多行、逗号分隔、空格分隔等）编写对应的读取和解析代码
+- 输出语句必须根据题目描述中的「输出描述」来实现，输出格式与题目要求一致
+- 即使题目是函数式提交（LeetCode 风格），也必须附带 ACM 模式的入口代码（main 函数 / Main 类 / if __name__ == "__main__"），在入口中读取输入、调用 Solution 的方法并打印结果
+- 入口代码中调用待填充的函数，并将返回值按题目要求输出
+- 如果题目要求读取多组数据，则包含循环读取多组数据的完整逻辑
+
+### 9. 输出格式
+- 仅输出代码，不要输出任何解释、说明或 markdown 代码块标记
+- 代码必须是可以直接编译/运行的（或至少语法正确）
+- 不要包含测试用例或示例调用代码（除非题目明确要求）`;
+
+DEMO_TEXT=`题目内容在一条长度为 n 的直线跑道上，每个格子的坐标从 0 到 n-1，每个格子上写着一个整数，存放在数组 tiles 中。这些数字有特殊含义：tiles[i] = 0，代表这是普通空地，可以通过；tiles[i] = 1，代表这是弹簧加速垫；tiles[i] = -1，代表这是陷阱。你控制的角色从坐标 0 出发，目标是成功到达或越过终点坐标 n-1（即坐标 >= n-1 即算通关）。角色移动规则：默认情况下，角色每一步只能向右移动 1 格。如果角色踩到弹簧加速垫（1），那么下一步可以向右移动 2 格。如果角色踩到陷阱（-1），游戏结束。输入描述给定一个整数数组 tiles，长度为 n，其中 1 <= n <= 10000。数组中的元素取值为 0、1 或 -1。输出描述如果角色从坐标 0 出发能够成功通关（到达或越过坐标 n-1），返回通关所需的步数；否则返回 -1。样例1输入0,1,-1,0,0输出3说明初始在坐标 0，当前格子是 0（普通空地）。第 1 步：移动 1 格，来到坐标 1，当前格子是 1（弹簧垫）。第 2 步：因为踩到弹簧，这步移动 2 格，来到坐标 3（成功越过了坐标 2 的陷阱），当前格子是 0。第 3 步：移动 1 格，来到坐标 4，检查：到达了坐标 4（等于 n-1），成功通关。`;
+
+// 语言转换依赖链：Python → Java/C++，Java → JS/Go，C++ → C
+const CONVERT_PARENT = { java: 'python', cpp: 'python', javascript: 'java', go: 'java', c: 'cpp' };
+
+let currentLang = 'python';
+let rawCode = '';
+let codeCache = {};   // lang -> 代码
+let chatCache = {};   // lang -> 对话记录
+let aiCodeByLang = {};   // lang -> 最近一次 AI 原始输出快照（确认条 diff 基准）
+
+/* ===== 代码微调记忆：确认状态持久化（ct_confirmed: lang -> bool）与确认条 ===== */
+
+function getConfirmed() {
+  try { return JSON.parse(localStorage.getItem('ct_confirmed') || '{}'); } catch (e) { return {}; }
+}
+// 确认/重新生成时更新标记：重新生成、转换或微调后清除对应语言标记，操作条重新出现
+function markConfirmed(lang, v) {
+  const s = getConfirmed();
+  if (v) s[lang] = true; else delete s[lang];
+  localStorage.setItem('ct_confirmed', JSON.stringify(s));
+}
+
+// 按当前语言视图刷新确认条（renderCode 末尾统一调用，切换语言/重新生成自动跟随）
+function renderConfirmBar() {
+  const container = $('confirmSlot');
+  if (!container) return;
+  if (!rawCode) {
+    const old = container.querySelector('.memory-confirm-bar');
+    if (old) old.remove();
+    return;
+  }
+  // 快照缺失（刷新/缓存恢复）时，把「确认条首次出现时」的代码捕获为 diff 基准并持久化。
+  // 不能用 aiCodeByLang[currentLang] || rawCode 兜底：编辑保存后 renderCode 会重渲染本条，
+  // 那时 rawCode 已是编辑后代码，基准会被污染成当前代码，导致后续确认永远误判「与 AI 一致」。
+  if (!aiCodeByLang[currentLang]) { aiCodeByLang[currentLang] = rawCode; saveAiCodes(); }
+  showConfirmBar(container, {
+    feature: 'template',
+    lang: currentLang,
+    aiCode: aiCodeByLang[currentLang] || '',
+    confirmed: !!getConfirmed()[currentLang],
+    // 确认成功后把 diff 基准更新为本次确认版：下一轮编辑只与最近确认版对比，避免重复提炼已记录的偏好
+    onConfirm: (finalCode) => { markConfirmed(currentLang, true); if (finalCode) { aiCodeByLang[currentLang] = finalCode; saveAiCodes(); } },
+    getCode: () => rawCode,
+    setCode: (code) => { codeCache[currentLang] = code; saveCodes(); renderCode(code); }
+  });
+}
+
+function saveAiCodes() { localStorage.setItem('ct_ai_codes', JSON.stringify(aiCodeByLang)); }
+
+function init() {
+  $('systemPrompt').value = localStorage.getItem('ct_prompt') || DEFAULT_PROMPT;
+  persistPromptOnInput('ct_prompt');
+  // 恢复上次的选择与生成结果（页面跳转不丢失）
+  try { codeCache = JSON.parse(localStorage.getItem('ct_codes') || '{}'); } catch (e) { codeCache = {}; }
+  try { chatCache = JSON.parse(localStorage.getItem('ct_chats') || '{}'); } catch (e) { chatCache = {}; }
+  try { aiCodeByLang = JSON.parse(localStorage.getItem('ct_ai_codes') || '{}'); } catch (e) { aiCodeByLang = {}; }   // 恢复 diff 基准快照
+  const cachedLang = localStorage.getItem('ct_lang');
+  if (cachedLang && LANG_CONFIG[cachedLang]) currentLang = cachedLang;
+  // 兼容旧版单语言缓存
+  const legacyCode = localStorage.getItem('ct_code');
+  if (legacyCode && !codeCache[currentLang]) codeCache[currentLang] = legacyCode;
+  syncLangButtons();
+  $('codeLangLabel').textContent = LANG_CONFIG[currentLang].name;
+  const cachedName = localStorage.getItem('ct_custom');
+  if (cachedName) $('customName').value = cachedName;
+  const cachedInput = localStorage.getItem('ct_input');
+  if (cachedInput) $('inputText').value = cachedInput;
+  // 生成缓存必须与当前输入严格一致，不一致则自动作废（与语言转换页一致）
+  if (ensureCacheFresh()) showToast('输入与生成缓存不一致，已自动清除旧缓存');
+  if (codeCache[currentLang]) renderCode(codeCache[currentLang]);
+  else renderChat();
+  updateInputStats();
+}
+
+function saveCodes() { localStorage.setItem('ct_codes', JSON.stringify(codeCache)); }
+function saveChats() { localStorage.setItem('ct_chats', JSON.stringify(chatCache)); }
+
+
+function selectLang(btn) {
+  currentLang = btn.dataset.lang;
+  localStorage.setItem('ct_lang', currentLang);
+  syncLangButtons();
+  $('codeLangLabel').textContent = LANG_CONFIG[currentLang].name;
+  if (codeCache[currentLang]) {
+    renderCode(codeCache[currentLang]);
+  } else {
+    showCodeEmpty('该语言尚未生成模板，点击「生成代码模板」或从已有代码一键转换');
+  }
+  renderChat();
+}
+
+function showCodeEmpty(hint) {
+  rawCode = '';
+  $('codeContent').classList.add('hidden');
+  $('codeEmpty').classList.remove('hidden');
+  if (hint) $('codeEmptyHint').textContent = hint;
+  $('lineStats').textContent = '0 行';
+  $('charStats').textContent = '0 字符';
+  $('convertBar').classList.add('hidden');
+  $('explainOutput').textContent = '生成说明将显示在这里...';
+  renderConfirmBar();   // 无代码时移除确认条
+}
+
+function loadDemo() {
+  $('inputText').value = DEMO_TEXT;
+  localStorage.setItem('ct_input', DEMO_TEXT);
+  updateInputStats();
+}
+function clearInput() {
+  $('inputText').value = '';
+  localStorage.removeItem('ct_input');
+  updateInputStats();
+}
+
+// 清空本页所有缓存（题目输入、各语言代码模板、AI 微调对话），用于开始新一道题目
+function clearAllCache() {
+  const hasData = Object.keys(codeCache).length || Object.keys(chatCache).length
+    || $('inputText').value.trim() || $('customName').value.trim();
+  if (hasData && !confirm('确定要清空全部缓存吗？\n将删除本页保存的题目输入、所有语言的代码模板和 AI 微调对话记录，此操作不可恢复。')) return;
+  codeCache = {};
+  chatCache = {};
+  aiCodeByLang = {};
+  saveAiCodes();
+  saveCodes();
+  saveChats();
+  ['ct_codes', 'ct_chats', 'ct_input', 'ct_lang', 'ct_custom', 'ct_code', 'ct_fp', 'ct_derived', 'ct_confirmed', 'ct_ai_codes']
+    .forEach(k => localStorage.removeItem(k));
+  currentLang = 'python';
+  rawCode = '';
+  syncLangButtons();
+  $('codeLangLabel').textContent = LANG_CONFIG[currentLang].name;
+  $('inputText').value = '';
+  $('customName').value = '';
+  showCodeEmpty('粘贴题目描述后，点击「生成代码模板」');
+  renderChat();
+  updateInputStats();
+  showToast('缓存已清空，可以开始新的题目');
+}
+function updateInputStats() {
+  $('inputStats').textContent = '输入 ' + $('inputText').value.length + ' 字符';
+}
+$('inputText').addEventListener('input', () => {
+  localStorage.setItem('ct_input', $('inputText').value);
+  // 题目描述一旦被修改，所有生成缓存即刻失效（与语言转换页一致）
+  if (ensureCacheFresh()) {
+    showCodeEmpty('题目描述已变更，请重新生成');
+    renderConvertBar();
+    renderChat();
+    showToast('题目描述已变更，已自动清除不一致的生成缓存');
+  }
+  updateInputStats();
+});
+$('customName').addEventListener('input', () => {
+  localStorage.setItem('ct_custom', $('customName').value);
+  // 自定义类名同样影响生成结果，变更后旧缓存失效
+  if (ensureCacheFresh()) {
+    showCodeEmpty('类名/函数名已变更，请重新生成');
+    renderConvertBar();
+    renderChat();
+    showToast('类名/函数名已变更，已自动清除不一致的生成缓存');
+  }
+});
+
+function switchTab(mode, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  if (mode === 'code') {
+    $('codeWindow').classList.remove('hidden');
+    $('explainOutput').classList.add('hidden');
+  } else {
+    $('codeWindow').classList.add('hidden');
+    $('explainOutput').classList.remove('hidden');
+  }
+}
+
+/* ===== 语法高亮 ===== */
+
+function renderCode(code) {
+  rawCode = code;
+  const highlighted = highlightCode(code, currentLang);
+  const lines = highlighted.split('\n');
+  $('codeContent').innerHTML = lines
+    .map(l => '<div class="cl"><span class="lc">' + (l || ' ') + '</span></div>')
+    .join('');
+  $('codeEmpty').classList.add('hidden');
+  $('codeContent').classList.remove('hidden');
+  $('codeLangLabel').textContent = LANG_CONFIG[currentLang].name;
+  $('lineStats').textContent = code.split('\n').length + ' 行';
+  $('charStats').textContent = code.length + ' 字符';
+  const derivedTag = getDerived()[currentLang]
+    ? '（由「代码语言转换」页从 ' + LANG_CONFIG[currentLang].name + ' 题解代码提取，输入输出框架与题解一致）' : '';
+  $('explainOutput').innerHTML = '当前为 <strong>' + LANG_CONFIG[currentLang].name + '</strong> 代码模板'
+    + derivedTag + '，'
+    + '共 <strong>' + code.split('\n').length + '</strong> 行。'
+    + '你可以直接复制代码、下载 .' + LANG_CONFIG[currentLang].ext + ' 文件，或在下方用 AI 指令微调。';
+  syncLangButtons();
+  renderConvertBar();
+  renderChat();
+  renderConfirmBar();
+}
+
+function renderConvertBar() {
+  ensureCacheFresh();  // 兜底校验：输入已变更时不展示过期缓存的 ✓ 标记
+  const wrap = $('convertBtns');
+  wrap.innerHTML = '';
+  Object.keys(LANG_CONFIG).forEach(lang => {
+    if (lang === currentLang) return;
+    const b = document.createElement('button');
+    b.className = 'convert-btn';
+    b.dataset.lang = lang;
+    b.textContent = LANG_CONFIG[lang].name + (codeCache[lang] ? ' ✓' : '');
+    b.title = codeCache[lang] ? '已生成，点击查看缓存' : '从当前语言转换为此语言';
+    b.onclick = () => {
+      // 已有缓存：直接查看，不重复消耗 API（与语言转换页一致）
+      if (codeCache[lang]) {
+        currentLang = lang;
+        localStorage.setItem('ct_lang', lang);
+        renderCode(codeCache[lang]);
+        return;
+      }
+      convertTo(lang);
+    };
+    wrap.appendChild(b);
+  });
+  $('convertBar').classList.remove('hidden');
+}
+
+async function generateTemplate() {
+  const text = $('inputText').value.trim();
+  if (!text) { showToast('请先输入题目描述'); return; }
+
+  const btn = $('genBtn');
+  const btnText = $('btnText');
+  const originalText = btnText.textContent;
+  btn.disabled = true;
+  btnText.innerHTML = '<span class="loading"></span> 生成中...';
+
+  try {
+    const baseUrl = getApiConfig().baseUrl;
+    const model = getApiConfig().model;
+    const langName = LANG_CONFIG[currentLang].name;
+    let prompt = $('systemPrompt').value.replace(/\{lang\}/g, langName) + getMemoryInject('template');
+    const customName = $('customName').value.trim();
+
+    const extraHint = [];
+    if (customName) extraHint.push('类名/函数名请使用：' + customName);
+    extraHint.push('目标语言：' + langName);
+    if (currentLang === 'python') extraHint.push('Python 模板要求：使用 class Solution: 形式，方法第一个参数为 self');
+    if (currentLang === 'java') extraHint.push('Java 模板要求：使用 public class Solution 形式，方法使用 public 修饰');
+    if (currentLang === 'cpp') extraHint.push('C++ 模板要求：使用 class Solution { public: ... } 形式');
+    if (currentLang === 'c') extraHint.push('C 模板要求：不使用 class，使用纯函数形式');
+    if (currentLang === 'javascript') extraHint.push('JavaScript 模板要求：使用函数或 class 形式，根据题目判断');
+    if (currentLang === 'go') extraHint.push('Go 模板要求：使用 func 定义，注意 Go 的语法特点（如大写导出）');
+
+    const userContent = '请根据以下题目描述，生成 ' + langName + ' 代码模板。'
+      + (extraHint.length ? '额外要求：' + extraHint.join('；') : '')
+      + '\n\n题目描述如下：\n' + text;
+
+    const data = await postChatCompletion(getApiConfig(), [
+      { role: 'system', content: prompt },
+      { role: 'user', content: userContent }
+    ], { maxTokens: 8192 });
+    const cleanCode = extractCode(data);
+
+    codeCache[currentLang] = cleanCode;
+    saveCodes();
+    markCodesFresh();
+    aiCodeByLang[currentLang] = cleanCode; saveAiCodes();   // 记录 AI 原始输出快照（确认条 diff 基准）
+    markConfirmed(currentLang, false);       // 重新生成后需重新确认
+    renderCode(cleanCode);
+    localStorage.setItem('ct_input', text);
+    localStorage.setItem('ct_lang', currentLang);
+    showToast('代码模板生成完成');
+  } catch (e) {
+    showToast('错误: ' + e.message, true);
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btnText.textContent = originalText;
+  }
+}
+
+
+// 去除模型返回中的 markdown 代码块围栏（兼容 CRLF 换行、大小写语言标记与行内空白）
+
+// 从 API 响应中安全提取代码内容：校验空响应、剥围栏、提示长度截断
+
+async function apiConvert(code, fromLangKey, toLangKey) {
+  const apiCfg = getApiConfig();
+  const baseUrl = apiCfg.baseUrl;
+  const model = apiCfg.model;
+  const fromName = LANG_CONFIG[fromLangKey].name;
+  const toName = LANG_CONFIG[toLangKey].name;
+  const prompt = $('systemPrompt').value.replace(/\{lang\}/g, toName) + getMemoryInject('template');
+  const customName = $('customName').value.trim();
+
+  const userContent = '请将以下 ' + fromName + ' 代码模板转换为 ' + toName + ' 代码模板。'
+    + '要求：严格遵守系统提示词中的全部生成规范（Solution 类规范、注释规范、输入输出处理等），'
+    + '输入输出逻辑保持不变，仅做语言层面的等价转换。'
+    + (customName ? '类名/函数名请使用：' + customName + '。' : '')
+    + '\n\n源代码模板（' + fromName + '）：\n' + code;
+
+  const data = await postChatCompletion(apiCfg, [
+    { role: 'system', content: prompt },
+    { role: 'user', content: userContent }
+  ], { maxTokens: 8192 });
+  return extractCode(data);
+}
+
+function setConvertButtonsDisabled(disabled) {
+  document.querySelectorAll('.convert-btn').forEach(b => b.disabled = disabled);
+  $('genAllBtn').disabled = disabled;
+  $('regenBtn').disabled = disabled;
+}
+
+/* ===== 缓存一致性校验：生成结果必须严格来自当前输入（与语言转换页逻辑一致） ===== */
+function sourceFingerprint(text) {
+  let h1 = 5381, h2 = 52711;
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    h1 = ((h1 * 33) ^ c) >>> 0;
+    h2 = ((h2 * 31) ^ c) >>> 0;
+  }
+  return text.length + ':' + h1.toString(36) + ':' + h2.toString(36);
+}
+
+// 生成结果绑定「题目描述 + 自定义类名」——两者任一变化，旧缓存即失效
+function currentInputFp() {
+  return sourceFingerprint($('inputText').value + '\n' + $('customName').value.trim());
+}
+
+function markCodesFresh() { localStorage.setItem('ct_fp', currentInputFp()); }
+
+// 派生模板（由语言转换页从题解代码提取）绑定题解而非题目描述输入，
+// 输入变更时予以保留；返回 { lang: 题解指纹 }
+function getDerived() {
+  try { return JSON.parse(localStorage.getItem('ct_derived') || '{}'); } catch (e) { return {}; }
+}
+function saveDerived(d) { localStorage.setItem('ct_derived', JSON.stringify(d)); }
+// 某语言重新生成/转换/微调后不再是"派生模板"，恢复受输入指纹约束
+function clearDerivedMark(lang) {
+  const d = getDerived();
+  if (d[lang]) { delete d[lang]; saveDerived(d); }
+}
+
+// 校验生成缓存与当前输入是否一致；不一致（或无指纹的旧缓存）一律作废，派生模板除外。返回是否发生了清除
+function ensureCacheFresh() {
+  if (!Object.keys(codeCache).length && !Object.keys(chatCache).length) return false;
+  const fp = localStorage.getItem('ct_fp');
+  if (fp && fp === currentInputFp()) return false;
+  const derived = getDerived();
+  let removed = Object.keys(chatCache).length > 0;
+  Object.keys(codeCache).forEach(l => { if (!derived[l]) { delete codeCache[l]; removed = true; } });
+  chatCache = {};
+  saveCodes();
+  saveChats();
+  localStorage.removeItem('ct_fp');
+  return removed;
+}
+
+// 重新生成当前语言（忽略缓存，从题目描述重新生成）
+function regenerateCurrent() {
+  if (!$('inputText').value.trim()) { showToast('请先输入题目描述'); return; }
+  generateTemplate();
+}
+
+async function convertTo(targetLang) {
+  if (!rawCode) { showToast('请先生成代码模板'); return; }
+  const fromLang = LANG_CONFIG[currentLang].name;
+  const toLangName = LANG_CONFIG[targetLang].name;
+  const btn = document.querySelector('.convert-btn[data-lang="' + targetLang + '"]');
+  const originalText = btn.textContent;
+  setConvertButtonsDisabled(true);
+  btn.innerHTML = '<span class="loading"></span> 转换中';
+  try {
+    const cleanCode = await apiConvert(rawCode, currentLang, targetLang);
+    codeCache[targetLang] = cleanCode;
+    saveCodes();
+    clearDerivedMark(targetLang);
+    markCodesFresh();
+    aiCodeByLang[targetLang] = cleanCode; saveAiCodes();
+    markConfirmed(targetLang, false);
+    currentLang = targetLang;
+    localStorage.setItem('ct_lang', targetLang);
+    renderCode(cleanCode);
+    showToast('已转换为 ' + toLangName);
+  } catch (e) {
+    showToast('错误: ' + e.message, true);
+    console.error(e);
+    btn.textContent = originalText;
+  } finally {
+    setConvertButtonsDisabled(false);
+    if (btn.isConnected) btn.textContent = originalText;
+  }
+}
+
+// 一键生成全部语言：按依赖链 Python→Java/C++，Java→JS/Go，C++→C 顺序在后台转换
+async function generateAll() {
+  if (!rawCode && !codeCache[currentLang]) { showToast('请先生成一种语言的代码模板'); return; }
+  if (rawCode) codeCache[currentLang] = rawCode;
+
+  const order = ['python', 'java', 'cpp', 'javascript', 'go', 'c'];
+  const targets = order.filter(l => l !== currentLang && !codeCache[l]);
+  if (!targets.length) { showToast('所有语言均已生成，切换语言标签即可查看'); return; }
+
+  const btn = $('genAllBtn');
+  const originalText = btn.textContent;
+  setConvertButtonsDisabled(true);
+  let failed = [];
+  try {
+    for (let i = 0; i < targets.length; i++) {
+      const t = targets[i];
+      const parent = CONVERT_PARENT[t];
+      const sourceKey = (parent && codeCache[parent]) ? parent : currentLang;
+      btn.innerHTML = '<span class="loading"></span> 生成中 ' + LANG_CONFIG[t].name
+        + ' (' + (i + 1) + '/' + targets.length + ')';
+      try {
+        codeCache[t] = await apiConvert(codeCache[sourceKey], sourceKey, t);
+        saveCodes();
+        aiCodeByLang[t] = codeCache[t];   // 每种语言各自记录快照，确认条跟随视图刷新
+        saveAiCodes();
+        markConfirmed(t, false);
+      } catch (e) {
+        console.error(t, e);
+        failed.push(LANG_CONFIG[t].name);
+      }
+    }
+  } finally {
+    setConvertButtonsDisabled(false);
+    btn.textContent = originalText;
+  }
+  markCodesFresh();
+  renderConvertBar();
+  if (failed.length) showToast('部分语言生成失败：' + failed.join('、'), true);
+  else {
+    showToast('全部语言已生成完成');
+    // 自动展示第一个新生成的结果（与语言转换页一致）
+    const first = targets.find(t => codeCache[t]);
+    if (first) {
+      currentLang = first;
+      localStorage.setItem('ct_lang', first);
+      renderCode(codeCache[first]);
+    }
+  }
+}
+
+
+/* ===== AI 对话微调当前语言代码 ===== */
+function renderChat() {
+  const box = $('chatMessages');
+  if (!box) return;
+  $('chatLangTag').textContent = LANG_CONFIG[currentLang].name;
+  const history = chatCache[currentLang] || [];
+  box.innerHTML = '';
+  const hint = document.createElement('div');
+  hint.className = 'chat-msg assistant';
+  hint.textContent = rawCode
+    ? '用自然语言描述修改要求，例如「把输入改为多组数据读取」「给变量加上注释」，修改将应用到当前 ' + LANG_CONFIG[currentLang].name + ' 代码。'
+    : '请先生成 ' + LANG_CONFIG[currentLang].name + ' 代码模板，然后再用指令微调。';
+  box.appendChild(hint);
+  history.forEach(m => {
+    const d = document.createElement('div');
+    d.className = 'chat-msg ' + (m.role === 'user' ? 'user' : 'assistant');
+    d.textContent = m.role === 'user' ? m.content : m.summary;
+    box.appendChild(d);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+async function sendChat() {
+  const input = $('chatInput');
+  const instruction = input.value.trim();
+  if (!instruction) return;
+  if (!rawCode) { showToast('请先生成代码模板'); return; }
+
+  input.value = '';
+  if (!chatCache[currentLang]) chatCache[currentLang] = [];
+  const history = chatCache[currentLang];
+  history.push({ role: 'user', content: instruction });
+  renderChat();
+
+  const sendBtn = $('chatSendBtn');
+  const originalText = sendBtn.textContent;
+  sendBtn.disabled = true;
+  sendBtn.innerHTML = '<span class="loading"></span>';
+
+  try {
+    const baseUrl = getApiConfig().baseUrl;
+    const model = getApiConfig().model;
+    const langName = LANG_CONFIG[currentLang].name;
+    const prompt = $('systemPrompt').value.replace(/\{lang\}/g, langName) + getMemoryInject('template');
+
+    const apiMessages = [{ role: 'system', content: prompt }];
+    history.slice(0, -1).forEach(m => apiMessages.push({ role: m.role, content: m.content }));
+    apiMessages.push({
+      role: 'user',
+      content: '以下是当前的 ' + langName + ' 代码模板：\n' + rawCode
+        + '\n\n请根据以下指令修改代码模板，严格遵守系统提示词中的全部生成规范，'
+        + '仅输出修改后的完整代码，不要输出任何解释：\n' + instruction
+    });
+
+    const data = await postChatCompletion(getApiConfig(), apiMessages, { maxTokens: 8192 });
+    const cleanCode = extractCode(data);
+
+    codeCache[currentLang] = cleanCode;
+    saveCodes();
+    aiCodeByLang[currentLang] = cleanCode; saveAiCodes();   // 微调输出为新的 diff 基准
+    markConfirmed(currentLang, false);
+    renderCode(cleanCode);
+    history.push({ role: 'assistant', content: cleanCode, summary: '已根据指令更新代码（' + cleanCode.split('\n').length + ' 行）' });
+    if (history.length > 20) chatCache[currentLang] = history.slice(-20);
+    saveChats();
+    renderChat();
+    showToast('代码已按指令更新');
+  } catch (e) {
+    history.pop();
+    renderChat();
+    showToast('错误: ' + e.message, true);
+    console.error(e);
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.textContent = originalText;
+  }
+}
+
+function clearChat() {
+  chatCache[currentLang] = [];
+  saveChats();
+  renderChat();
+  showToast('已清空当前语言的对话记录');
+}
+
+function copyResult() {
+  if (!rawCode) { showToast('没有内容可复制'); return; }
+  copyText(rawCode, '已复制到剪贴板', () => {
+    const btn = $('copyIconBtn');
+    btn.classList.add('copied');
+    setTimeout(() => btn.classList.remove('copied'), 1200);
+  });
+}
+
+function downloadResult() {
+  if (!rawCode) { showToast('没有内容可下载'); return; }
+  const ext = LANG_CONFIG[currentLang].ext;
+  const blob = new Blob([rawCode], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'solution.' + ext;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('已下载 solution.' + ext);
+}
+
+
+/* ===== 全局 API 设置（所有页面共享 tc_config） ===== */
+
+init();
+</script>
+</body>
+</html>

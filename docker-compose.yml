@@ -1,0 +1,13 @@
+services:
+  od-toolkit:
+    build: .
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      # 改成你自己的同步密钥
+      - SYNC_TOKEN=${SYNC_TOKEN:-}
+      # 风格数据持久化到宿主机 ./data
+    volumes:
+      - ./data:/srv/data
+    restart: unless-stopped

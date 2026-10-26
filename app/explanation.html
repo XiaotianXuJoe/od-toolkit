@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>题解说明生成器</title>
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>题解说明生成器</h1>
+    <p>根据题目描述与代码，生成带完整讲解的详细中文题解</p>
+  </header>
+
+  <div class="nav-bar">
+    <a href="index.html">文本乱码清理</a>
+    <a href="code-template.html">代码模板生成</a>
+    <a href="solution.html">题解代码生成</a>
+    <a href="convert.html">代码语言转换</a>
+    <a class="active" href="explanation.html">题解说明生成</a>
+    <a href="csdn.html">CSDN 发布</a>
+    <a href="style.html">风格学习</a>
+    <a href="memory.html">记忆中心</a>
+    <button class="nav-settings" onclick="openSettings()" title="API 设置">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="card-title collapsible collapsed" onclick="toggleCollapse(this, 'promptArea')">系统提示词（点击展开/折叠）</div>
+    <div id="promptArea" class="collapse-content collapsed">
+      <textarea id="systemPrompt" style="min-height:160px; font-size:13px;"></textarea>
+      <div class="btn-group" style="margin-top:8px;">
+        <button class="btn btn-secondary" onclick="resetPrompt('ex_prompt')">恢复默认</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">1</span>题目与代码</div>
+    <div class="field">
+      <label>代码语言</label>
+      <div class="lang-grid" id="langGrid">
+        <button class="lang-btn active" data-lang="python" onclick="selectLang(this)">Python</button>
+        <button class="lang-btn" data-lang="java" onclick="selectLang(this)">Java</button>
+        <button class="lang-btn" data-lang="cpp" onclick="selectLang(this)">C++</button>
+        <button class="lang-btn" data-lang="c" onclick="selectLang(this)">C</button>
+        <button class="lang-btn" data-lang="javascript" onclick="selectLang(this)">JavaScript</button>
+        <button class="lang-btn" data-lang="go" onclick="selectLang(this)">Go</button>
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="field">
+        <label>题目描述（可点击按钮导入「文本乱码清理」的结果，可编辑）</label>
+        <textarea id="questionText" placeholder="在此粘贴题目描述...&#10;&#10;可点击「导入已清理文本」导入「文本乱码清理」页的结果。"></textarea>
+        <div class="input-tools">
+          <button class="btn btn-secondary" onclick="importCleanedText('questionText')">导入已清理文本</button>
+          <button class="btn btn-secondary" onclick="clearInputValue('questionText', '题目描述')">删除输入内容</button>
+        </div>
+        <div class="stats"><span class="stat-badge" id="questionStats">0 字符</span></div>
+      </div>
+      <div class="field">
+        <label>代码（可点击按钮导入当前语言的题解代码，可编辑）</label>
+        <textarea id="codeText" placeholder="在此粘贴要讲解的代码...&#10;&#10;可点击「导入已生成代码」导入「题解代码生成」或「代码语言转换」页的当前语言代码。"></textarea>
+        <div class="input-tools">
+          <button class="btn btn-secondary" onclick="importGeneratedCode('codeText', [{ label: '题解代码生成', key: 'sol_codes', langs: [currentLang] }, { label: '代码语言转换', key: 'cv_codes', langs: [currentLang] }])">导入已生成代码</button>
+          <button class="btn btn-secondary" onclick="clearInputValue('codeText', '代码')">删除输入内容</button>
+        </div>
+        <div class="stats"><span class="stat-badge" id="codeStats">0 字符</span></div>
+      </div>
+    </div>
+    <div class="field">
+      <label>生成要求（可选）</label>
+      <input type="text" id="extraRequirement" placeholder="例如：面向初学者讲解 / 重点讲解动态规划的状态转移方程 / 附上样例推演过程">
+      <div class="input-tools">
+        <button class="btn btn-secondary" onclick="clearInputValue('extraRequirement', '生成要求')">删除输入内容</button>
+      </div>
+      <small>生成题解说明时会结合此要求；留空则按默认结构生成</small>
+    </div>
+    <div class="btn-group" style="margin-top:4px;">
+      <button class="btn btn-primary" id="genBtn" onclick="generateExplanation()">
+        <span id="btnText">生成题解说明</span>
+      </button>
+    </div>
+    <div class="style-row">
+      <label class="style-toggle"><input type="checkbox" id="styleToggle" onchange="toggleStyle(this.checked)"> 模仿我的个人风格</label>
+      <span class="style-status" id="styleStatus"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">2</span>题解说明</div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('rendered', this)">渲染预览</button>
+      <button class="tab" onclick="switchTab('source', this)">Markdown 源码</button>
+    </div>
+    <div class="level-filter hidden" id="levelFilter">
+      <span class="lf-label">按标题层级展示</span>
+      <button class="lf-btn active" data-level="0" onclick="setLevelFilter(0, this)">全部</button>
+      <button class="lf-btn" data-level="1" onclick="setLevelFilter(1, this)">仅一级标题</button>
+      <button class="lf-btn" data-level="2" onclick="setLevelFilter(2, this)">到二级</button>
+      <button class="lf-btn" data-level="3" onclick="setLevelFilter(3, this)">到三级</button>
+    </div>
+    <div id="renderedOutput" class="output-area">
+      <div class="empty-state">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+        <div class="empty-title">生成的题解说明将显示在这里</div>
+        <div class="empty-hint" id="emptyHint">确认题目与代码后点击「生成题解说明」</div>
+      </div>
+    </div>
+    <textarea id="sourceOutput" class="output-area source-view hidden" readonly style="min-height:240px;" placeholder="Markdown 源码将显示在这里"></textarea>
+
+    <div class="chat-panel">
+      <div class="chat-header">
+        <span>AI 微调说明<span class="chat-lang-tag" id="chatLangTag">Python</span></span>
+        <button class="chat-clear" onclick="clearChat()">清空对话</button>
+      </div>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="输入修改指令，如「补充时间复杂度推导过程」「语言再通俗一些」，回车发送..."
+               onkeydown="if(event.key==='Enter'&&!event.isComposing)sendChat()">
+        <button class="btn btn-primary chat-send" id="chatSendBtn" onclick="sendChat()">发送</button>
+      </div>
+    </div>
+
+    <div class="btn-group" style="margin-top:12px;">
+      <button class="btn btn-secondary" onclick="copyResult()">复制 Markdown</button>
+      <button class="btn btn-secondary" onclick="copyRendered()">复制渲染结果（粘贴到飞书）</button>
+      <button class="btn btn-secondary" onclick="downloadResult()">下载 .md</button>
+      <button class="btn btn-danger" style="margin-left:auto;" onclick="clearAllCache()">清空全部缓存</button>
+    </div>
+    <div class="stats">
+      <span class="stat-badge" id="outputStats">输出 0 字符</span>
+    </div>
+  </div>
+</div>
+
+<div class="settings-overlay hidden" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+  <div class="settings-panel">
+    <div class="settings-header">
+      <span>API 设置</span>
+      <button class="settings-close" onclick="closeSettings()" title="关闭">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="warning-box">API Key 可留空：留空时自动使用服务器内置 Key，打开即用。填写自己的 Key 则仅存储在浏览器本地，直连失败时自动改经本服务器同源中转转发（服务器不存储你的 Key）。所有功能页面共享此配置，只需设置一次。</div>
+    <div class="field">
+      <label>API Key</label>
+      <input type="password" id="cfgApiKey" placeholder="留空则使用服务器内置 Key" autocomplete="off">
+      <small>留空 = 使用服务器内置 Key（推荐）；自带 Key 时才会用到下方 Base URL 直连</small>
+    </div>
+    <div class="field">
+      <label>Base URL</label>
+      <input type="text" id="cfgBaseUrl" placeholder="https://api.moonshot.cn/v1" value="https://api.moonshot.cn/v1">
+    </div>
+    <div class="field">
+      <label>模型</label>
+      <input type="text" id="cfgModel" placeholder="kimi-k2.6" value="kimi-k2.6">
+    </div>
+    <div class="field">
+      <label>Temperature</label>
+      <input type="number" id="cfgTemperature" placeholder="0.6" value="0.6" min="0" max="2" step="0.1">
+      <small>kimi-k2.6 非思考模式必须设为 0.6，否则 API 报错</small>
+    </div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="cfgDisableThinking" checked style="width:auto;"> 关闭模型思考（显著提速，推荐）</label>
+      <small>思考型模型（如 kimi-k2.6）推理耗时很长，可能超时或耗尽输出预算；关闭后响应更快更稳。若所用端点不支持该参数会自动回退，不影响使用。</small>
+    </div>
+    <div class="field">
+      <label>同步密钥（可选）</label>
+      <input type="password" id="cfgSyncToken" placeholder="服务器设置了 SYNC_TOKEN 时填写" autocomplete="off">
+      <small>仅用于 API 中转鉴权（服务器设了 SYNC_TOKEN 时填写）；风格数据同步免密，无需为此填写</small>
+    </div>
+    <div class="btn-group" style="margin-top:4px;">
+      <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
+      <button class="btn btn-secondary" onclick="testConnection()">测试连接</button>
+      <button class="btn btn-secondary" onclick="loadSettings()">恢复已保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">已复制到剪贴板</div>
+
+<script src="common.js"></script>
+<script>
+const DEFAULT_PROMPT = `你是一位专业的算法题解撰写专家。你的任务是根据题目描述和题解代码，撰写详细、清晰、易懂的中文题解说明。
+
+## 撰写规范
+
+### 1. 内容结构（使用 Markdown 标题组织）
+- 「# 题目理解」：用简洁的中文重新描述题意，说明输入、输出和关键约束
+- 「# 算法思路」：讲解采用的算法及核心思想，为什么选择这个算法
+- 「# 复杂度分析」：给出时间复杂度和空间复杂度，并简要说明推导过程
+- 「# 代码讲解」：结合代码逐段讲解实现细节，关键变量和关键步骤必须解释清楚
+- 「# 边界情况」：说明代码如何处理边界与特殊情况
+- 「# 样例推演」：如果题目包含样例，用样例数据完整推演一遍执行过程
+
+### 2. 表达要求
+- 全程使用简体中文，语言通俗易懂，避免生硬直译
+- 代码中的变量名、函数名、关键表达式必须用反引号包裹
+- 适当使用列表、表格辅助说明
+- 讲解要与给定代码严格一致，不要脱离代码凭空发挥
+
+### 3. 特殊要求
+- 如果用户提供了生成要求，必须严格遵循
+
+### 4. 输出格式
+- 仅输出 Markdown 格式的题解说明，不要输出任何额外解释`;
+
+let currentLang = 'python';
+let explainCache = {};   // lang -> 题解说明 markdown
+let chatCache = {};      // lang -> 对话记录
+let solutionCacheRef = {};
+let convertCacheRef = {};
+
+/* ===== 全局 API 设置（所有页面共享 tc_config） ===== */
+
+
+/* ===== 个人风格档案注入（来自「风格学习」页） ===== */
+
+function init() {
+  $('systemPrompt').value = localStorage.getItem('ex_prompt') || DEFAULT_PROMPT;
+  persistPromptOnInput('ex_prompt');
+  try { explainCache = JSON.parse(localStorage.getItem('ex_texts') || '{}'); } catch (e) { explainCache = {}; }
+  try { chatCache = JSON.parse(localStorage.getItem('ex_chats') || '{}'); } catch (e) { chatCache = {}; }
+  try { solutionCacheRef = JSON.parse(localStorage.getItem('sol_codes') || '{}'); } catch (e) { solutionCacheRef = {}; }
+  try { convertCacheRef = JSON.parse(localStorage.getItem('cv_codes') || '{}'); } catch (e) { convertCacheRef = {}; }
+
+  const cachedLang = localStorage.getItem('ex_lang') || localStorage.getItem('sol_lang') || localStorage.getItem('ct_lang');
+  if (cachedLang && LANG_CONFIG[cachedLang]) currentLang = cachedLang;
+  syncLangButtons();
+
+  // 上游产物（清理文本/题解代码）一律通过输入框旁的按钮手动导入，不再自动带入
+  const question = localStorage.getItem('ex_question') || '';
+  $('questionText').value = question;
+  const req = localStorage.getItem('ex_requirement');
+  if (req) $('extraRequirement').value = req;
+
+  if (explainCache[currentLang]) showResult(explainCache[currentLang]);
+  else renderChat();
+  refreshStyleRow();
+  updateStats();
+}
+
+function saveExplains() { localStorage.setItem('ex_texts', JSON.stringify(explainCache)); }
+function saveChats() { localStorage.setItem('ex_chats', JSON.stringify(chatCache)); }
+
+// 清空本页所有缓存（各语言题解说明、AI 微调对话、生成要求），用于开始新一道题目
+function clearAllCache() {
+  const hasData = Object.keys(explainCache).length || Object.keys(chatCache).length
+    || $('extraRequirement').value.trim();
+  if (hasData && !confirm('确定要清空全部缓存吗？\n将删除本页保存的所有语言题解说明、AI 微调对话记录和生成要求，此操作不可恢复。')) return;
+  explainCache = {};
+  chatCache = {};
+  saveExplains();
+  saveChats();
+  ['ex_texts', 'ex_chats', 'ex_lang', 'ex_requirement', 'ex_question']
+    .forEach(k => localStorage.removeItem(k));
+  currentLang = 'python';
+  syncLangButtons();
+  $('questionText').value = '';
+  $('codeText').value = '';
+  $('extraRequirement').value = '';
+  $('levelFilter').classList.add('hidden');
+  showEmpty('填写题目描述与代码后，点击「生成题解说明」');
+  renderChat();
+  updateStats();
+  showToast('缓存已清空，可以开始新的题目');
+}
+
+function selectLang(btn) {
+  currentLang = btn.dataset.lang;
+  localStorage.setItem('ex_lang', currentLang);
+  syncLangButtons();
+  if (explainCache[currentLang]) showResult(explainCache[currentLang]);
+  else showEmpty('该语言尚未生成题解说明，点击「生成题解说明」');
+  updateStats();
+  renderChat();
+}
+
+// 载入代码：优先题解代码缓存，其次语言转换缓存
+function showEmpty(hint) {
+  $('sourceOutput').value = '';
+  $('renderedOutput').innerHTML = '<div class="empty-state">'
+    + '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>'
+    + '<div class="empty-title">生成的题解说明将显示在这里</div>'
+    + '<div class="empty-hint">' + hint + '</div></div>';
+  $('outputStats').textContent = '输出 0 字符';
+}
+
+function updateStats() {
+  $('questionStats').textContent = $('questionText').value.length + ' 字符';
+  $('codeStats').textContent = $('codeText').value.length + ' 字符';
+}
+$('questionText').addEventListener('input', () => {
+  localStorage.setItem('ex_question', $('questionText').value);
+});
+$('codeText').addEventListener('input', updateStats);
+$('extraRequirement').addEventListener('input', () => {
+  localStorage.setItem('ex_requirement', $('extraRequirement').value);
+});
+
+function switchTab(mode, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  if (mode === 'rendered') {
+    $('renderedOutput').classList.remove('hidden');
+    $('sourceOutput').classList.add('hidden');
+  } else {
+    $('renderedOutput').classList.add('hidden');
+    $('sourceOutput').classList.remove('hidden');
+  }
+}
+
+/* ===== 标题层级筛选 ===== */
+
+function showResult(md) {
+  $('sourceOutput').value = md;
+  $('renderedOutput').innerHTML = renderMarkdown(md);
+  afterRender();
+}
+
+// 块级 Markdown 解析：标题 / 代码块 / 表格 / 列表(嵌套) / 引用 / 分割线 / 段落
+
+
+/* ===== 复制渲染结果（富文本，适配飞书粘贴） ===== */
+
+
+function copyResult() {
+  const text = $('sourceOutput').value;
+  if (!text) { showToast('没有内容可复制'); return; }
+  copyText(text, '已复制 Markdown 源码');
+}
+
+function downloadResult() {
+  const text = $('sourceOutput').value;
+  if (!text) { showToast('没有内容可下载'); return; }
+  const blob = new Blob([text], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '题解说明.md';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('已下载 题解说明.md');
+}
+
+// 统一走 common.js 的 fetchWithContinuation：网络层错误（Failed to fetch）与 429/5xx 自动重试、
+// 截断自动续写；仅用 stripWrappingFence 剥离整体外层围栏，切勿按行删除 ```
+async function callApi(messages) {
+  const apiCfg = getApiConfig();
+  const raw = await fetchWithContinuation(apiCfg, messages, { maxTokens: 16384 });
+  const text = stripWrappingFence(raw);
+  if (!text) throw new Error('模型返回了空内容，请重试');
+  return text;
+}
+
+async function generateExplanation() {
+  const question = $('questionText').value.trim();
+  if (!question) { showToast('请先填写题目描述'); return; }
+  const code = $('codeText').value.trim();
+  if (!code) { showToast('请先填写代码'); return; }
+
+  const btn = $('genBtn');
+  const btnText = $('btnText');
+  const originalText = btnText.textContent;
+  btn.disabled = true;
+  btnText.innerHTML = '<span class="loading"></span> 生成中...';
+
+  try {
+    const langName = LANG_CONFIG[currentLang].name;
+    const prompt = $('systemPrompt').value + getStyleInject('text');
+    const requirement = $('extraRequirement').value.trim();
+
+    let userContent = '请根据以下题目描述和 ' + langName + ' 题解代码，撰写详细的中文题解说明。';
+    if (requirement) userContent += '\n\n生成要求（必须遵循）：' + requirement;
+    userContent += '\n\n题目描述：\n' + question + '\n\n题解代码（' + langName + '）：\n' + code;
+
+    const result = await callApi([
+      { role: 'system', content: prompt },
+      { role: 'user', content: userContent }
+    ]);
+
+    explainCache[currentLang] = result;
+    saveExplains();
+    showResult(result);
+    $('outputStats').textContent = '输出 ' + result.length + ' 字符';
+    showToast('题解说明生成完成');
+  } catch (e) {
+    showToast('错误: ' + e.message, true);
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btnText.textContent = originalText;
+  }
+}
+
+/* ===== AI 对话微调当前语言题解说明 ===== */
+function renderChat() {
+  const box = $('chatMessages');
+  if (!box) return;
+  $('chatLangTag').textContent = LANG_CONFIG[currentLang].name;
+  const history = chatCache[currentLang] || [];
+  box.innerHTML = '';
+  const hint = document.createElement('div');
+  hint.className = 'chat-msg assistant';
+  hint.textContent = $('sourceOutput').value
+    ? '用自然语言描述修改要求，例如「补充复杂度推导」「语言再通俗一些」，修改将应用到当前 ' + LANG_CONFIG[currentLang].name + ' 的题解说明。'
+    : '请先生成题解说明，然后再用指令微调。';
+  box.appendChild(hint);
+  history.forEach(m => {
+    const d = document.createElement('div');
+    d.className = 'chat-msg ' + (m.role === 'user' ? 'user' : 'assistant');
+    d.textContent = m.role === 'user' ? m.content : m.summary;
+    box.appendChild(d);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+async function sendChat() {
+  const input = $('chatInput');
+  const instruction = input.value.trim();
+  if (!instruction) return;
+  const current = $('sourceOutput').value;
+  if (!current) { showToast('请先生成题解说明'); return; }
+
+  input.value = '';
+  if (!chatCache[currentLang]) chatCache[currentLang] = [];
+  const history = chatCache[currentLang];
+  history.push({ role: 'user', content: instruction });
+  renderChat();
+
+  const sendBtn = $('chatSendBtn');
+  const originalText = sendBtn.textContent;
+  sendBtn.disabled = true;
+  sendBtn.innerHTML = '<span class="loading"></span>';
+
+  try {
+    const langName = LANG_CONFIG[currentLang].name;
+    const prompt = $('systemPrompt').value + getStyleInject('text');
+
+    const apiMessages = [{ role: 'system', content: prompt }];
+    history.slice(0, -1).forEach(m => apiMessages.push({ role: m.role, content: m.content }));
+    apiMessages.push({
+      role: 'user',
+      content: '以下是当前的题解说明（' + langName + '）：\n' + current
+        + '\n\n请根据以下指令修改题解说明，保持 Markdown 格式，'
+        + '仅输出修改后的完整题解说明，不要输出任何额外解释：\n' + instruction
+    });
+
+    const result = await callApi(apiMessages);
+
+    explainCache[currentLang] = result;
+    saveExplains();
+    showResult(result);
+    $('outputStats').textContent = '输出 ' + result.length + ' 字符';
+    history.push({ role: 'assistant', content: result, summary: '已根据指令更新题解说明（' + result.length + ' 字符）' });
+    if (history.length > 20) chatCache[currentLang] = history.slice(-20);
+    saveChats();
+    renderChat();
+    showToast('题解说明已按指令更新');
+  } catch (e) {
+    history.pop();
+    renderChat();
+    showToast('错误: ' + e.message, true);
+    console.error(e);
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.textContent = originalText;
+  }
+}
+
+function clearChat() {
+  chatCache[currentLang] = [];
+  saveChats();
+  renderChat();
+  showToast('已清空当前语言的对话记录');
+}
+
+init();
+</script>
+</body>
+</html>

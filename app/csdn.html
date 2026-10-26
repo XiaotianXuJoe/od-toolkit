@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSDN 题解发布助手</title>
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>CSDN 题解发布助手</h1>
+    <p>将从飞书复制的 Markdown 题解自动加工为 CSDN 可发布格式：头尾去重 + 拼接固定头尾 + 代码块语言小写规范化（纯本地转换，无需 API）</p>
+  </header>
+
+  <div class="nav-bar">
+    <a href="index.html">文本乱码清理</a>
+    <a href="code-template.html">代码模板生成</a>
+    <a href="solution.html">题解代码生成</a>
+    <a href="convert.html">代码语言转换</a>
+    <a href="explanation.html">题解说明生成</a>
+    <a class="active" href="csdn.html">CSDN 发布</a>
+    <a href="style.html">风格学习</a>
+    <a href="memory.html">记忆中心</a>
+    <button class="nav-settings" onclick="openSettings()" title="API 设置">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">1</span>粘贴飞书 Markdown 题解</div>
+    <textarea id="inputText" placeholder="在此粘贴从飞书文档复制的 Markdown 题解（可包含头尾固定格式，会自动识别并去重）..."></textarea>
+    <div class="input-tools">
+      <button class="btn btn-secondary" onclick="importExplanationText('inputText')">导入已生成题解说明</button>
+      <button class="btn btn-secondary" onclick="clearInputValue('inputText', '输入内容')">删除输入内容</button>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-secondary" onclick="loadDemo()">加载示例</button>
+    </div>
+    <div class="stats">
+      <span class="stat-badge" id="inputStats">输入 0 字符</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">2</span>题目信息与固定格式（可编辑，自动保存）</div>
+    <div class="hint-box" style="margin-bottom:12px;">所有内容修改后自动保存在浏览器本地，也可点击「保存头部 / 保存尾部」手动保存确认，之后每篇题解都会使用最新版本；点击「恢复默认」可还原对应项为初始样式。</div>
+    <div class="field">
+      <label>题目名称</label>
+      <input type="text" id="problemTitle" placeholder="【模拟】20260823-直线冲刺">
+      <div class="input-tools">
+        <button class="btn btn-secondary" onclick="clearInputValue('problemTitle', '题目名称')">删除输入内容</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>题目练习网址（可手动填写；正文中含「题目练习网址：」行时会自动提取）</label>
+      <input type="text" id="practiceLink" placeholder="https://www.algomooc.com/problems/N0063">
+      <div class="input-tools">
+        <button class="btn btn-secondary" onclick="clearInputValue('practiceLink', '题目练习网址')">删除输入内容</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>CSDN 文章标题模板（{题目名称} 会被替换为上方题目名称）</label>
+      <textarea id="titleTpl" style="min-height:56px;font-size:13px;"></textarea>
+    </div>
+    <div class="btn-group" style="margin-top:2px;">
+      <button class="btn btn-secondary" onclick="resetTitleTpl()">恢复默认标题模板</button>
+    </div>
+    <div class="field" style="margin-top:14px;">
+      <label>CSDN 文章标题（生成结果，可直接复制到 CSDN 标题栏）</label>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="articleTitle" readonly placeholder="填写题目名称后自动生成" style="flex:1;">
+        <button class="btn btn-secondary" style="flex-shrink:0;" onclick="copyArticleTitle()">复制标题</button>
+      </div>
+    </div>
+    <div class="field" style="margin-top:14px;">
+      <label>头部固定格式</label>
+      <textarea id="headerTpl" style="min-height:180px;font-size:13px;"></textarea>
+    </div>
+    <div class="btn-group" style="margin-top:2px;">
+      <button class="btn btn-primary" onclick="saveHeader()">保存头部</button>
+      <button class="btn btn-secondary" onclick="resetHeader()">恢复默认头部</button>
+    </div>
+    <div class="field" style="margin-top:14px;">
+      <label>尾部固定格式</label>
+      <textarea id="footerTpl" style="min-height:140px;font-size:13px;"></textarea>
+    </div>
+    <div class="btn-group" style="margin-top:2px;">
+      <button class="btn btn-primary" onclick="saveFooter()">保存尾部</button>
+      <button class="btn btn-secondary" onclick="resetFooter()">恢复默认尾部</button>
+    </div>
+    <div class="field" style="margin-top:14px;">
+      <label>正文中需要删除的行（每行一个行首前缀，转换时整行移除）</label>
+      <textarea id="removePrefixes" style="min-height:56px;font-size:13px;"></textarea>
+    </div>
+    <div class="btn-group" style="margin-top:2px;">
+      <button class="btn btn-secondary" onclick="resetRemovePrefixes()">恢复默认删除规则</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="btn-group" style="margin-bottom:16px;">
+      <button class="btn btn-primary" id="convertBtn" onclick="convert()">
+        <span id="btnText">一键转换为 CSDN 格式</span>
+      </button>
+    </div>
+    <div class="hint-box">自动处理：粘贴内容若已包含头尾固定格式会自动去重；代码块语言标识转为 CSDN 要求的小写形式（如 <code>```C++</code> → <code>```cpp</code>、<code>```Python</code> → <code>```python</code>）、去除围栏前的缩进空格、移除正文中多余的 <code>@[toc]</code>、提取正文「题目练习网址」行并回填头部、删除「视频直播讲解」等指定前缀行，最后在首尾拼接固定格式。</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">3</span>转换结果</div>
+    <div class="btn-group" style="margin-bottom:12px;">
+      <button class="btn btn-secondary" onclick="copyResult()">复制 Markdown（粘贴到 CSDN 编辑器）</button>
+      <button class="btn btn-secondary" onclick="copyRendered()">复制渲染结果</button>
+      <button class="btn btn-secondary" onclick="downloadResult()">下载 .md</button>
+      <button class="btn btn-danger" style="margin-left:auto;" onclick="clearAllCache()">清空全部缓存</button>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('rendered')">渲染预览</button>
+      <button class="tab" onclick="switchTab('source')">Markdown 源码</button>
+    </div>
+    <div id="renderedOutput" class="output-area">
+      <div class="empty-state">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+        <div class="empty-title">转换结果将显示在这里</div>
+        <div class="empty-hint">粘贴题解并点击「一键转换为 CSDN 格式」</div>
+      </div>
+    </div>
+    <textarea id="sourceOutput" class="output-area source-view hidden" readonly style="min-height:240px;" placeholder="Markdown 源码将显示在这里"></textarea>
+    <div class="stats">
+      <span class="stat-badge" id="outputStats">输出 0 字符</span>
+      <span class="stat-badge" id="fenceStats">代码块 0 个</span>
+    </div>
+  </div>
+</div>
+
+
+<div class="settings-overlay hidden" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+  <div class="settings-panel">
+    <div class="settings-header">
+      <span>API 设置</span>
+      <button class="settings-close" onclick="closeSettings()" title="关闭">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="warning-box">本页面为纯本地转换，无需 API；此处的设置与套件内其他页面共享，供需要大模型的页面使用。API Key 可留空（使用服务器内置 Key）；填写自己的 Key 则仅存储在浏览器本地，直连失败时自动改经服务器中转（服务器不存储你的 Key）。</div>
+    <div class="field">
+      <label>API Key</label>
+      <input type="password" id="cfgApiKey" placeholder="留空则使用服务器内置 Key" autocomplete="off">
+      <small>留空 = 使用服务器内置 Key（推荐）；自带 Key 时才会用到下方 Base URL 直连</small>
+    </div>
+    <div class="field">
+      <label>Base URL</label>
+      <input type="text" id="cfgBaseUrl" placeholder="https://api.moonshot.cn/v1" value="https://api.moonshot.cn/v1">
+    </div>
+    <div class="field">
+      <label>模型</label>
+      <input type="text" id="cfgModel" placeholder="kimi-k2.6" value="kimi-k2.6">
+    </div>
+    <div class="field">
+      <label>Temperature</label>
+      <input type="number" id="cfgTemperature" placeholder="0.6" value="0.6" min="0" max="2" step="0.1">
+      <small>kimi-k2.6 非思考模式必须设为 0.6，否则 API 报错</small>
+    </div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="cfgDisableThinking" checked style="width:auto;"> 关闭模型思考（显著提速，推荐）</label>
+      <small>思考型模型（如 kimi-k2.6）推理耗时很长，可能超时或耗尽输出预算；关闭后响应更快更稳。若所用端点不支持该参数会自动回退，不影响使用。</small>
+    </div>
+    <div class="field">
+      <label>同步密钥（可选）</label>
+      <input type="password" id="cfgSyncToken" placeholder="服务器设置了 SYNC_TOKEN 时填写" autocomplete="off">
+      <small>仅用于 API 中转鉴权（服务器设了 SYNC_TOKEN 时填写）；风格数据同步免密，无需为此填写</small>
+    </div>
+    <div class="btn-group" style="margin-top:4px;">
+      <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
+      <button class="btn btn-secondary" onclick="testConnection()">测试连接</button>
+      <button class="btn btn-secondary" onclick="loadSettings()">恢复已保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">已复制到剪贴板</div>
+
+<script src="common.js"></script>
+<script>
+/* ===== 默认头尾固定格式（来自用户提供的 CSDN 样例） ===== */
+
+const DEFAULT_HEADER = `
+@[toc]
+
+# 相关推荐阅读
+- [【2026华为OD机考】最新套题持续更新【完全原创题解 | 详细考点分类 | 不断更新题目 | 六种主流语言Py+Java+Cpp+C+Js+Go】](https://blog.csdn.net/weixin_48157259/article/details/160188021)
+- [【2026年华为OD机考最新政策】2026年新规改革最新变化 | 学习策略 | 考试时间 | 出题形式 | 输入形式 | 考前流程 | 双机位摆放](https://blog.csdn.net/weixin_48157259/article/details/160188596)
+- [【华为OD机考正在更新】2025年双机位A卷真题【完全原创题解 | 详细考点分类 | 不断更新题目 | 六种主流语言Py+Java+Cpp+C+Js+Go】](https://blog.csdn.net/weixin_48157259/article/details/151975139)
+- [【华为OD机考】2025C+2025B+2024E+D卷真题【完全原创题解 | 详细考点分类 | 不断更新题目】](https://blog.csdn.net/weixin_48157259/article/details/140784279)
+- [【华为OD笔试】双机位A+2025C+2025B+2024E+D卷真题机考套题汇总【真实反馈，不断更新，限时免费】](https://blog.csdn.net/weixin_48157259/article/details/138087531)
+- [【华为OD笔试】2024E+D卷命题规律解读【分析500+场OD笔试考点总结】](https://blog.csdn.net/weixin_48157259/article/details/140467274)
+- [【华为OD流程】性格测试选项+注意事项](https://blog.csdn.net/weixin_48157259/article/details/142070988)
+
+---
+
+题目练习网址：[【算法】日期-题目名称](https://www.algomooc.com/problem/xxxx)`;
+
+const DEFAULT_FOOTER = `---
+
+# 华为OD算法/大厂面试高频题算法练习冲刺训练
+
+- **华子OD算法/大厂面试高频题算法冲刺训练**目前开始常态化报名！目前已服务1000+同学成功上岸！
+
+- 课程讲师为全网200w+粉丝编程博主@**吴师兄学算法** 以及小红书头部编程博主@**闭着眼睛学数理化**
+
+- 90+天陪伴式学习，100+直播课时，300+动画图解视频，500+LeetCode经典题，500+华为OD真题/大厂真题，还有简历修改、模拟面试、陪伴小群、资深HR对接将为你解锁
+
+- 可上全网独家的[欧弟OJ系统](https://www.algomooc.com/)练习华子OD、大厂真题`;
+
+// CSDN 文章标题模板，{题目名称} 会被替换为实际题目名称
+const DEFAULT_TITLE_TPL = '【2026OD新机考】{题目名称}【Py/Java/C++/C/JS/Go六种语言OD真题】【欧弟算法】全网注释最详细分类最全的华子OD真题题解';
+
+// 正文中需要整行删除的行首前缀（每行一个）
+const DEFAULT_REMOVE_PREFIXES = '视频直播讲解：';
+
+/* ===== CSDN 代码块语言规范化 ===== */
+
+// CSDN 编辑器要求 ``` 后的语言标识为小写；常见别名统一映射
+const CSDN_LANG_ALIAS = {
+  'c++': 'cpp', 'cpp': 'cpp', 'cc': 'cpp', 'cxx': 'cpp',
+  'c++11': 'cpp', 'c++14': 'cpp', 'c++17': 'cpp', 'c++20': 'cpp',
+  'c': 'c', 'c#': 'csharp', 'csharp': 'csharp',
+  'py': 'python', 'py3': 'python', 'python': 'python', 'python3': 'python',
+  'java': 'java',
+  'js': 'javascript', 'jsx': 'javascript', 'javascript': 'javascript',
+  'node': 'javascript', 'nodejs': 'javascript',
+  'ts': 'typescript', 'typescript': 'typescript',
+  'go': 'go', 'golang': 'go',
+  'sh': 'shell', 'shell': 'shell', 'bash': 'shell', 'zsh': 'shell',
+  'sql': 'sql', 'json': 'json', 'html': 'html', 'css': 'css',
+  'xml': 'xml', 'yaml': 'yaml', 'yml': 'yaml'
+};
+
+function normalizeForCsdn(md, removePrefixes, headerText, footerText) {
+  const rawLines = md.replace(/\r\n/g, '\n').split('\n');
+
+  // 头尾模板签名行（归一化：去首尾空格、压缩内部空白），用于识别粘贴内容中重复的头尾
+  const normLine = s => s.trim().replace(/\s+/g, ' ');
+  const sigOf = tpl => new Set((tpl || '').replace(/\r\n/g, '\n').split('\n')
+    .map(normLine)
+    .filter(s => s && !/^@\[toc\]$/i.test(s) && !/^(?:[-*+]\s*)?题目练习网址：/.test(s)));
+  const headerSig = sigOf(headerText);
+  const footerSig = sigOf(footerText);
+  // 合并默认模板签名：用户自定义头尾后，粘贴内容里残留的旧版默认头尾同样识别去重
+  sigOf(DEFAULT_HEADER).forEach(s => headerSig.add(s));
+  sigOf(DEFAULT_FOOTER).forEach(s => footerSig.add(s));
+
+  // 起始指针：剥离与头部固定格式重复的前导内容
+  // 「推荐阅读」标题会开启 section 模式：跳过其后所有链接列表行（含断行残行、
+  // 列表符号缺失等变体），直到遇到 --- 分隔线、练习网址行或真正的正文内容
+  let start = 0, dupRemoved = 0, inRecSection = false;
+  let preUrl = '', preTitle = '';
+  const takePractice = t => {
+    const prac = t.match(/^(?:[-*+]\s*)?题目练习网址：\s*(.*)$/);
+    if (!prac) return false;
+    const rest = prac[1].trim();
+    const link = rest.match(/\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/);
+    const url = rest.match(/https?:\/\/[^\s)\]]+/);
+    if (link) { if (link[1].trim()) preTitle = link[1].trim(); preUrl = link[2]; }
+    else if (url) { preUrl = url[0]; }
+    return true;
+  };
+  while (start < rawLines.length) {
+    const t = rawLines[start].trim();
+    if (t === '') { start++; continue; }
+    if (inRecSection) {
+      if (/^[-*+]\s*\[/.test(t) || /^\(?\s*https?:\/\/\S+\)?\s*$/.test(t)) { start++; dupRemoved++; continue; }
+      if (/^-{3,}$/.test(t)) { start++; dupRemoved++; inRecSection = false; continue; }
+      if (takePractice(t)) { start++; dupRemoved++; inRecSection = false; continue; }
+      inRecSection = false; // 非链接内容：退出 section 模式，按常规规则判断
+    }
+    if (/^#{1,6}\s*\S*推荐阅读/.test(t)) { inRecSection = true; start++; dupRemoved++; continue; }
+    if (/^@\[toc\]$/i.test(t) || headerSig.has(normLine(t))
+        || (/blog\.csdn\.net/.test(t) && /^[-*+(\s]*(?:\[|https?:)/.test(t))) {
+      start++; dupRemoved++; continue;
+    }
+    if (takePractice(t)) { start++; dupRemoved++; continue; }
+    break;
+  }
+  // 结束指针：剥离与尾部固定格式重复的末尾内容
+  let end = rawLines.length;
+  while (end > start) {
+    const t = rawLines[end - 1].trim();
+    if (t === '') { end--; continue; }
+    if (footerSig.has(normLine(t))) { end--; dupRemoved++; continue; }
+    break;
+  }
+
+  const lines = rawLines.slice(start, end);
+  let inFence = false, fenceCount = 0, tocRemoved = 0, linesRemoved = 0;
+  let practiceUrl = preUrl, practiceTitle = preTitle;
+  const langs = new Set();
+  const out = [];
+  for (const line of lines) {
+    if (!inFence) {
+      // 移除正文中已有的 @[toc]（头部固定格式里已包含）
+      if (/^\s*@\[toc\]\s*$/i.test(line)) { tocRemoved++; continue; }
+      // 提取「题目练习网址」行（支持纯 URL 或 Markdown 链接，可带列表符号），该行不进入正文
+      const prac = line.match(/^\s*(?:[-*+]\s*)?题目练习网址：\s*(.*)$/);
+      if (prac) {
+        const rest = prac[1].trim();
+        const link = rest.match(/\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/);
+        const url = rest.match(/https?:\/\/[^\s)\]]+/);
+        if (link) { if (link[1].trim()) practiceTitle = link[1].trim(); practiceUrl = link[2]; }
+        else if (url) { practiceUrl = url[0]; }
+        continue;
+      }
+      // 删除指定行首前缀的行（如 视频直播讲解：），兼容列表符号与缩进
+      const stripped = line.replace(/^\s*(?:[-*+]\s*)?/, '');
+      if (removePrefixes.some(p => p && stripped.startsWith(p))) { linesRemoved++; continue; }
+    }
+    const fence = line.match(/^\s*```\s*([A-Za-z0-9#+._-]*)\s*$/);
+    if (fence) {
+      if (!inFence) {
+        inFence = true;
+        fenceCount++;
+        let lang = fence[1].toLowerCase();
+        lang = CSDN_LANG_ALIAS[lang] || lang;
+        if (lang) langs.add(lang);
+        out.push('```' + lang);
+      } else {
+        inFence = false;
+        out.push('```');
+      }
+      continue;
+    }
+    out.push(line);
+  }
+  // 压缩 3 个及以上连续换行，避免飞书复制产生的过大空隙
+  const text = out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  return { text, fenceCount, langs: Array.from(langs), tocRemoved, linesRemoved, practiceUrl, practiceTitle, dupRemoved };
+}
+
+/* ===== 页面逻辑 ===== */
+
+const DEMO_TEXT = `# 题目描述与示例
+
+- 题目练习网址：https://www.algomooc.com/problems/N0063
+- 视频直播讲解：2026/08/29 真题讲解（20260823真题）
+
+## 题目描述
+
+给定一个只包含大写英文字母的字符串 \`L\`，求将 \`L\` 重新排列后，相同字母不相邻的不同排列数。
+
+## 示例一
+
+### 输入
+
+ \`\`\`Python
+AAB
+\`\`\`
+
+### 输出
+
+ \`\`\`Python
+1
+\`\`\`
+
+### 说明
+
+只有 \`ABA\` 满足条件
+
+# 解题思路
+
+使用回溯枚举所有排列，排序后剪枝去重。
+
+# 代码
+
+## 解法一：回溯
+
+### Python
+
+ \`\`\`Python3
+class Solution:
+    def countArrangement(self, L: str) -> int:
+        return 1
+\`\`\`
+
+### java
+
+ \`\`\`Java
+class Solution {
+    public int countArrangement(String L) {
+        return 1;
+    }
+}
+\`\`\`
+
+### C++
+
+ \`\`\`C++
+class Solution {
+public:
+    int countArrangement(string L) {
+        return 1;
+    }
+};
+\`\`\`
+
+### Node JavaScript
+
+ \`\`\`JS
+console.log(1);
+\`\`\`
+
+### Go
+
+ \`\`\`Go
+fmt.Println(1)
+\`\`\`
+
+## 时空复杂度
+
+时间复杂度：\`O(n!)\`。
+
+空间复杂度：\`O(n)\`。`;
+
+function init() {
+  $('headerTpl').value = localStorage.getItem('csdn_header') || DEFAULT_HEADER;
+  $('footerTpl').value = localStorage.getItem('csdn_footer') || DEFAULT_FOOTER;
+  $('titleTpl').value = localStorage.getItem('csdn_title_tpl') || DEFAULT_TITLE_TPL;
+  $('removePrefixes').value = localStorage.getItem('csdn_remove_prefixes') || DEFAULT_REMOVE_PREFIXES;
+  const cachedTitle = localStorage.getItem('csdn_title');
+  if (cachedTitle) $('problemTitle').value = cachedTitle;
+  const cachedPractice = localStorage.getItem('csdn_practice');
+  if (cachedPractice) $('practiceLink').value = cachedPractice;
+  updateArticleTitle();
+  const cachedInput = localStorage.getItem('csdn_input');
+  if (cachedInput) $('inputText').value = cachedInput;
+  const cachedResult = localStorage.getItem('csdn_result');
+  if (cachedResult) {
+    showResult(cachedResult);
+    $('outputStats').textContent = '输出 ' + cachedResult.length + ' 字符';
+    const cachedFence = localStorage.getItem('csdn_fence_stats');
+    if (cachedFence) $('fenceStats').textContent = cachedFence;
+  }
+  updateInputStats();
+}
+
+$('headerTpl').addEventListener('input', () => {
+  const v = $('headerTpl').value;
+  if (v === DEFAULT_HEADER) localStorage.removeItem('csdn_header');
+  else localStorage.setItem('csdn_header', v);
+});
+
+$('footerTpl').addEventListener('input', () => {
+  const v = $('footerTpl').value;
+  if (v === DEFAULT_FOOTER) localStorage.removeItem('csdn_footer');
+  else localStorage.setItem('csdn_footer', v);
+});
+
+$('practiceLink').addEventListener('input', () => {
+  localStorage.setItem('csdn_practice', $('practiceLink').value);
+});
+
+$('problemTitle').addEventListener('input', () => {
+  localStorage.setItem('csdn_title', $('problemTitle').value);
+  updateArticleTitle();
+});
+
+$('titleTpl').addEventListener('input', () => {
+  const v = $('titleTpl').value;
+  if (v === DEFAULT_TITLE_TPL) localStorage.removeItem('csdn_title_tpl');
+  else localStorage.setItem('csdn_title_tpl', v);
+  updateArticleTitle();
+});
+
+$('removePrefixes').addEventListener('input', () => {
+  const v = $('removePrefixes').value;
+  if (v === DEFAULT_REMOVE_PREFIXES) localStorage.removeItem('csdn_remove_prefixes');
+  else localStorage.setItem('csdn_remove_prefixes', v);
+});
+
+function updateArticleTitle() {
+  const t = $('problemTitle').value.trim();
+  $('articleTitle').value = t ? $('titleTpl').value.split('{题目名称}').join(t) : '';
+}
+
+function copyArticleTitle() {
+  const v = $('articleTitle').value;
+  if (!v) { showToast('请先填写题目名称'); return; }
+  copyText(v, '已复制文章标题');
+}
+
+function resetTitleTpl() {
+  $('titleTpl').value = DEFAULT_TITLE_TPL;
+  localStorage.removeItem('csdn_title_tpl');
+  updateArticleTitle();
+  showToast('已恢复默认标题模板');
+}
+
+function resetRemovePrefixes() {
+  $('removePrefixes').value = DEFAULT_REMOVE_PREFIXES;
+  localStorage.removeItem('csdn_remove_prefixes');
+  showToast('已恢复默认删除规则');
+}
+
+$('inputText').addEventListener('input', () => {
+  localStorage.setItem('csdn_input', $('inputText').value);
+  updateInputStats();
+});
+
+function saveHeader() {
+  const v = $('headerTpl').value;
+  if (v === DEFAULT_HEADER) localStorage.removeItem('csdn_header');
+  else localStorage.setItem('csdn_header', v);
+  showToast('头部固定格式已保存，后续每篇题解都会使用');
+}
+
+function saveFooter() {
+  const v = $('footerTpl').value;
+  if (v === DEFAULT_FOOTER) localStorage.removeItem('csdn_footer');
+  else localStorage.setItem('csdn_footer', v);
+  showToast('尾部固定格式已保存，后续每篇题解都会使用');
+}
+
+function resetHeader() {
+  $('headerTpl').value = DEFAULT_HEADER;
+  localStorage.removeItem('csdn_header');
+  showToast('已恢复默认头部格式');
+}
+
+function resetFooter() {
+  $('footerTpl').value = DEFAULT_FOOTER;
+  localStorage.removeItem('csdn_footer');
+  showToast('已恢复默认尾部格式');
+}
+
+function loadDemo() {
+  $('inputText').value = DEMO_TEXT;
+  updateInputStats();
+}
+
+function clearInput() {
+  $('inputText').value = '';
+  localStorage.removeItem('csdn_input');
+  updateInputStats();
+}
+
+function clearAllCache() {
+  const hasData = localStorage.getItem('csdn_input') || localStorage.getItem('csdn_result')
+    || $('inputText').value.trim() || $('problemTitle').value.trim() || $('practiceLink').value.trim();
+  if (hasData && !confirm('确定要清空全部缓存吗？\n将删除本页保存的题解输入、题目信息和转换结果（固定格式与模板会保留），此操作不可恢复。')) return;
+  localStorage.removeItem('csdn_input');
+  localStorage.removeItem('csdn_result');
+  localStorage.removeItem('csdn_fence_stats');
+  localStorage.removeItem('csdn_practice');
+  localStorage.removeItem('csdn_title');
+  $('inputText').value = '';
+  $('practiceLink').value = '';
+  $('problemTitle').value = '';
+  updateArticleTitle();
+  $('sourceOutput').value = '';
+  $('renderedOutput').innerHTML = '<div class="empty-state">'
+    + '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>'
+    + '<div class="empty-title">转换结果将显示在这里</div>'
+    + '<div class="empty-hint">粘贴题解并点击「一键转换为 CSDN 格式」</div></div>';
+  $('outputStats').textContent = '输出 0 字符';
+  $('fenceStats').textContent = '代码块 0 个';
+  updateInputStats();
+  showToast('缓存已清空，可以开始新的题目');
+}
+
+function updateInputStats() {
+  $('inputStats').textContent = '输入 ' + $('inputText').value.length + ' 字符';
+}
+
+function switchTab(mode) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  if (mode === 'rendered') {
+    $('renderedOutput').classList.remove('hidden');
+    $('sourceOutput').classList.add('hidden');
+  } else {
+    $('renderedOutput').classList.add('hidden');
+    $('sourceOutput').classList.remove('hidden');
+  }
+}
+
+function showResult(md) {
+  $('sourceOutput').value = md;
+  $('renderedOutput').innerHTML = renderMarkdown(md);
+}
+
+function convert() {
+  const text = $('inputText').value.trim();
+  if (!text) { showToast('请先粘贴题解内容'); return; }
+
+  const removePrefixes = $('removePrefixes').value.split('\n').map(s => s.trim()).filter(Boolean);
+  const norm = normalizeForCsdn(text, removePrefixes, $('headerTpl').value, $('footerTpl').value);
+
+  // 正文提取到的练习网址 / 题目名称自动回填输入框（正文信息最权威）
+  if (norm.practiceUrl) {
+    $('practiceLink').value = norm.practiceUrl;
+    localStorage.setItem('csdn_practice', norm.practiceUrl);
+  }
+  if (norm.practiceTitle && !$('problemTitle').value.trim()) {
+    $('problemTitle').value = norm.practiceTitle;
+    localStorage.setItem('csdn_title', norm.practiceTitle);
+    updateArticleTitle();
+  }
+
+  let header = $('headerTpl').value.trim();
+  const footer = $('footerTpl').value.trim();
+  const url = norm.practiceUrl || $('practiceLink').value.trim();
+  const title = $('problemTitle').value.trim();
+
+  // 替换头部中的「题目练习网址」一行：有题目名称时生成 Markdown 链接
+  if (url) {
+    const line = '题目练习网址：' + (title ? '[' + title + '](' + url + ')' : url);
+    if (/^\s*题目练习网址：.*$/m.test(header)) {
+      header = header.replace(/^\s*题目练习网址：.*$/m, line);
+    } else {
+      header = header + '\n\n' + line;
+    }
+  }
+
+  const result = header + '\n\n' + norm.text + (footer ? '\n\n' + footer : '');
+  showResult(result);
+  localStorage.setItem('csdn_result', result);
+  localStorage.setItem('csdn_input', text);
+
+  $('outputStats').textContent = '输出 ' + result.length + ' 字符';
+  const fenceText = '代码块 ' + norm.fenceCount + ' 个' + (norm.langs.length ? '（' + norm.langs.join('、') + '）' : '');
+  $('fenceStats').textContent = fenceText;
+  localStorage.setItem('csdn_fence_stats', fenceText);
+
+  let msg = '转换完成：已规范化 ' + norm.fenceCount + ' 个代码块';
+  if (norm.dupRemoved > 0) msg += '，去重头尾重复 ' + norm.dupRemoved + ' 行';
+  if (norm.practiceUrl) msg += '，已提取练习网址';
+  if (norm.linesRemoved > 0) msg += '，删除 ' + norm.linesRemoved + ' 行';
+  if (norm.tocRemoved > 0) msg += '，移除 ' + norm.tocRemoved + ' 处 @[toc]';
+  showToast(msg);
+}
+
+function copyResult() {
+  const text = $('sourceOutput').value;
+  if (!text) { showToast('没有内容可复制'); return; }
+  copyText(text, '已复制 Markdown，可直接粘贴到 CSDN 编辑器');
+}
+
+function downloadResult() {
+  const text = $('sourceOutput').value;
+  if (!text) { showToast('没有内容可下载'); return; }
+  const blob = new Blob([text], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'csdn.md';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('已下载 csdn.md');
+}
+
+init();
+</script>
+</body>
+</html>

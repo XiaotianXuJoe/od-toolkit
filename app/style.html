@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个人风格学习</title>
+<link rel="stylesheet" href="common.css">
+  <style>
+  /* 本页专属的样式覆盖（与公共样式不同的部分） */
+  .btn { padding: 10px 24px; border-radius: var(--radius-sm); border: none; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: var(--font-sans); }
+  .card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; margin-bottom: 20px; }
+  .card-title { font-size: 16px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .card-title .icon { width: 24px; height: 24px; border-radius: 6px; background: var(--accent); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
+  .collapse-content.collapsed { display: none; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 40px 20px; }
+  .empty-state { text-align: center; padding: 44px 20px; color: var(--text-tertiary); }
+  .field { margin-bottom: 14px; }
+  .hint-box { background: #f0f7ff; border: 1px solid #c8e0fb; border-radius: var(--radius-sm); padding: 10px 14px; font-size: 12.5px; color: #1d5fb8; margin-bottom: 14px; line-height: 1.6; }
+  .hint-box code { background: rgba(0,113,227,0.1); padding: 1px 5px; border-radius: 4px; font-family: var(--font-mono); font-size: 12px; }
+  .loading { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: -2px; }
+  .output-area { min-height: 240px; max-height: 560px; overflow-y: auto; font-size: 14px; line-height: 1.8; }
+  .output-area blockquote { border-left: 3px solid var(--border); padding-left: 14px; margin: 10px 0; color: var(--text-secondary); }
+  .output-area code { background: var(--bg); padding: 2px 6px; border-radius: 4px; font-family: var(--font-mono); font-size: 12.5px; }
+  .output-area h1 { font-size: 20px; font-weight: 700; margin: 20px 0 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border-light); }
+  .output-area h2 { font-size: 17px; font-weight: 600; margin: 18px 0 8px; }
+  .output-area h3 { font-size: 15px; font-weight: 600; margin: 14px 0 6px; }
+  .output-area hr { border: none; border-top: 1px solid var(--border-light); margin: 16px 0; }
+  .output-area li { margin: 4px 0; }
+  .output-area p { margin: 8px 0; }
+  .output-area pre { background: #161616; color: #dbdbdb; padding: 14px 16px; border-radius: 10px; overflow-x: auto; margin: 12px 0; font-size: 12.5px; line-height: 1.6; }
+  .output-area pre code { background: none; padding: 0; color: inherit; }
+  .output-area table { border-collapse: collapse; margin: 12px 0; width: 100%; font-size: 13px; }
+  .output-area th { background: var(--bg); font-weight: 600; }
+  .output-area th, .output-area td { border: 1px solid var(--border-light); padding: 7px 12px; text-align: left; }
+  .output-area ul, .output-area ol { margin: 8px 0 8px 24px; }
+  .stats { display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+  .tab { padding: 8px 16px; border: none; background: none; font-size: 13px; font-weight: 500; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; font-family: var(--font-sans); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tabs { display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 1px solid var(--border-light); }
+  .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text); color: #fff; padding: 10px 24px; border-radius: 24px; font-size: 13px; opacity: 0; transition: all 0.3s; z-index: 3000; pointer-events: none; max-width: 80vw; text-align: center; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .warning-box { background: #fff8e6; border: 1px solid #f5e0a8; border-radius: var(--radius-sm); padding: 10px 14px; font-size: 12.5px; color: #8a6d1d; margin-bottom: 16px; line-height: 1.5; }
+  header h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.5px; }
+  textarea { width: 100%; min-height: 140px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: var(--font-mono); line-height: 1.6; resize: vertical; transition: border-color 0.15s; }
+  .card-title.collapsible { cursor: pointer; user-select: none; }
+  .card-title.collapsible::after { content: '▾'; margin-left: auto; color: var(--text-tertiary); transition: transform 0.2s; }
+  .card-title.collapsed::after { transform: rotate(-90deg); }
+  .field input, .field textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; font-family: var(--font-sans); transition: border-color 0.15s; }
+  .field input:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
+  textarea:focus { outline: none; border-color: var(--accent); }
+  .stat-badge { font-size: 12px; color: var(--text-tertiary); background: var(--bg); padding: 3px 10px; border-radius: 10px; }
+  .sample-list { display: flex; flex-direction: column; gap: 8px; }
+  .sample-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid var(--border-light); border-radius: var(--radius-sm); background: var(--bg); }
+  .sample-item .sample-name { font-size: 13.5px; font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sample-item .sample-meta { font-size: 12px; color: var(--text-tertiary); flex-shrink: 0; }
+  .sample-item .sample-del { border: none; background: none; color: var(--text-tertiary); cursor: pointer; font-size: 12px; padding: 4px 8px; border-radius: 6px; flex-shrink: 0; }
+  .sample-item .sample-del:hover { background: #fee2e2; color: #dc2626; }
+  .sample-empty { padding: 24px; text-align: center; color: var(--text-tertiary); font-size: 13px; border: 1px dashed var(--border); border-radius: var(--radius-sm); }
+  /* 样本标题输入框 */
+  .title-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: var(--font-sans); margin-bottom: 10px; transition: border-color 0.15s; box-sizing: border-box; }
+  .title-input:focus { outline: none; border-color: var(--accent); }
+  /* 样本编辑按钮 */
+  .sample-item .sample-edit { border: none; background: none; color: var(--accent); cursor: pointer; font-size: 12px; padding: 4px 8px; border-radius: 6px; flex-shrink: 0; }
+  .sample-item .sample-edit:hover { background: rgba(0,113,227,0.1); }
+  /* 样本编辑弹窗（复用 settings-overlay 布局，面板加宽以容纳文章） */
+  .edit-panel { max-width: 760px; }
+  .edit-content { min-height: 280px; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.7; }
+  /* 图片附件缩略图 */
+  .thumb-strip { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .thumb-strip:empty { display: none; }
+  .thumb { position: relative; width: 56px; height: 56px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-light); }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb .thumb-del { position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; border: none; border-radius: 50%; background: rgba(0,0,0,0.55); color: #fff; font-size: 11px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>个人风格学习</h1>
+    <p>导入你过往的题解文章，提炼专属风格档案，让 AI 在题解与代码创作中模仿你的风格</p>
+  </header>
+
+  <div class="nav-bar">
+    <a href="index.html">文本乱码清理</a>
+    <a href="code-template.html">代码模板生成</a>
+    <a href="solution.html">题解代码生成</a>
+    <a href="convert.html">代码语言转换</a>
+    <a href="explanation.html">题解说明生成</a>
+    <a href="csdn.html">CSDN 发布</a>
+    <a class="active" href="style.html">风格学习</a>
+    <a href="memory.html">记忆中心</a>
+    <button class="nav-settings" onclick="openSettings()" title="API 设置">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="card-title collapsible collapsed" onclick="toggleCollapse(this, 'promptArea')">系统提示词（点击展开/折叠）</div>
+    <div id="promptArea" class="collapse-content collapsed">
+      <div class="hint-box">该提示词用于从样本文章中提炼风格档案。生成的档案会注入「题解代码生成」和「题解说明生成」的系统提示词中，让 AI 模仿你的风格创作。</div>
+      <textarea id="systemPrompt" style="min-height:160px; font-size:13px;"></textarea>
+      <div class="btn-group" style="margin-top:8px;">
+        <button class="btn btn-secondary" onclick="resetPrompt('style_prompt')">恢复默认</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">1</span>导入题解文章</div>
+    <input type="text" id="sampleTitle" class="title-input" placeholder="样本标题（可选，留空则自动从文章首行推断）" maxlength="60">
+    <textarea id="articleInput" placeholder="在此粘贴一篇你过往撰写的完整题解文章（包含讲解文字与代码）..."></textarea>
+    <div class="btn-group">
+      <button class="btn btn-primary" id="addBtn" onclick="addSample()">添加到样本库</button>
+      <button class="btn btn-secondary" onclick="$('imgInput').click()">添加图片附件</button>
+      <button class="btn btn-secondary" onclick="$('fileInput').click()">上传文件导入（.md / .txt / 图片）</button>
+      <input type="file" id="fileInput" class="hidden" multiple accept=".md,.txt,image/*,text/markdown,text/plain">
+      <input type="file" id="imgInput" class="hidden" multiple accept="image/*">
+    </div>
+    <div class="thumb-strip" id="pendingImgs"></div>
+    <div class="hint-box" style="margin-top:10px;">文章配图可以<strong>直接 Ctrl+V 粘贴到正文对应位置</strong>（也可点「添加图片附件」插入到光标处），风格分析时图片会按文中位置一并发给模型理解。批量导入时，把 <code>.md</code> 文件和它引用的图片（文件名一致）一起选中即可自动匹配。</div>
+    <div class="stats">
+      <span class="stat-badge" id="inputStats">0 字符</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">2</span>样本库</div>
+    <div class="sample-list" id="sampleList"></div>
+    <div class="stats">
+      <span class="stat-badge" id="sampleStats">共 0 篇 · 0 字符</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">3</span>我的风格档案</div>
+    <div class="btn-group" style="margin-top:0; margin-bottom:14px;">
+      <button class="btn btn-primary" id="analyzeBtn" onclick="analyzeStyle()">
+        <span id="analyzeBtnText">分析样本并生成风格档案</span>
+      </button>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('rendered', this)">渲染预览</button>
+      <button class="tab" onclick="switchTab('source', this)">编辑档案源码</button>
+    </div>
+    <div id="renderedOutput" class="output-area">
+      <div class="empty-state">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        <div class="empty-title">风格档案将显示在这里</div>
+        <div class="empty-hint">先在上方导入若干篇题解文章，再点击「分析样本并生成风格档案」</div>
+      </div>
+    </div>
+    <textarea id="profileSource" class="hidden" style="min-height:260px;" placeholder="可在此直接编辑风格档案 Markdown，编辑后点击「保存档案」生效"></textarea>
+    <div class="btn-group" style="margin-top:12px;">
+      <button class="btn btn-secondary" onclick="saveProfile()">保存档案</button>
+      <button class="btn btn-secondary" onclick="copyProfile()">复制 Markdown</button>
+      <button class="btn btn-danger" style="margin-left:auto;" onclick="clearAllCache()">清空全部缓存</button>
+    </div>
+    <div class="style-row">
+      <label class="style-toggle"><input type="checkbox" id="styleToggle" onchange="toggleStyle(this.checked)"> 在题解说明与题解代码创作中模仿我的风格</label>
+      <span class="style-status" id="styleStatus"></span>
+    </div>
+    <div class="stats">
+      <span class="stat-badge" id="profileStats">档案 0 字符</span>
+    </div>
+  </div>
+</div>
+
+<div class="settings-overlay hidden" id="editOverlay" onclick="if(event.target===this)closeEdit()">
+  <div class="settings-panel edit-panel">
+    <div class="settings-header">
+      <span>编辑样本</span>
+      <button class="settings-close" onclick="closeEdit()" title="关闭">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="field">
+      <label>样本标题</label>
+      <input type="text" id="editTitle" maxlength="60" placeholder="留空则自动从文章首行推断">
+    </div>
+    <div class="field" style="margin-bottom:8px;">
+      <label>文章内容</label>
+      <textarea id="editContent" class="edit-content"></textarea>
+    </div>
+    <div class="field" style="margin-bottom:8px;">
+      <label>图片附件（风格分析时一并发给模型理解）</label>
+      <div class="thumb-strip" id="editImgs"></div>
+      <button class="btn btn-secondary" style="margin-top:8px;" onclick="$('editImgInput').click()">添加图片</button>
+      <input type="file" id="editImgInput" class="hidden" multiple accept="image/*">
+    </div>
+    <div class="stats" style="margin:0 0 12px;">
+      <span class="stat-badge" id="editStats">0 字符</span>
+    </div>
+    <div class="btn-group" style="margin-top:0;">
+      <button class="btn btn-primary" onclick="saveEdit()">保存修改</button>
+      <button class="btn btn-secondary" onclick="closeEdit()">取消</button>
+    </div>
+  </div>
+</div>
+
+<div class="settings-overlay hidden" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+  <div class="settings-panel">
+    <div class="settings-header">
+      <span>API 设置</span>
+      <button class="settings-close" onclick="closeSettings()" title="关闭">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="warning-box">API Key 可留空：留空时自动使用服务器内置 Key，打开即用。填写自己的 Key 则仅存储在浏览器本地，直连失败时自动改经本服务器同源中转转发（服务器不存储你的 Key）。所有功能页面共享此配置，只需设置一次。</div>
+    <div class="field">
+      <label>API Key</label>
+      <input type="password" id="cfgApiKey" placeholder="留空则使用服务器内置 Key" autocomplete="off">
+      <small>留空 = 使用服务器内置 Key（推荐）；自带 Key 时才会用到下方 Base URL 直连</small>
+    </div>
+    <div class="field">
+      <label>Base URL</label>
+      <input type="text" id="cfgBaseUrl" placeholder="https://api.moonshot.cn/v1" value="https://api.moonshot.cn/v1">
+    </div>
+    <div class="field">
+      <label>模型</label>
+      <input type="text" id="cfgModel" placeholder="kimi-k2.6" value="kimi-k2.6">
+    </div>
+    <div class="field">
+      <label>Temperature</label>
+      <input type="number" id="cfgTemperature" placeholder="0.6" value="0.6" min="0" max="2" step="0.1">
+      <small>kimi-k2.6 非思考模式必须设为 0.6，否则 API 报错</small>
+    </div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="cfgDisableThinking" checked style="width:auto;"> 关闭模型思考（显著提速，推荐）</label>
+      <small>思考型模型（如 kimi-k2.6）推理耗时很长，可能超时或耗尽输出预算；关闭后响应更快更稳。若所用端点不支持该参数会自动回退，不影响使用。</small>
+    </div>
+    <div class="field">
+      <label>同步密钥（可选）</label>
+      <input type="password" id="cfgSyncToken" placeholder="服务器设置了 SYNC_TOKEN 时填写" autocomplete="off">
+      <small>仅用于 API 中转鉴权（服务器设了 SYNC_TOKEN 时填写）；风格数据同步免密，无需为此填写</small>
+    </div>
+    <div class="btn-group" style="margin-top:4px;">
+      <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
+      <button class="btn btn-secondary" onclick="testConnection()">测试连接</button>
+      <button class="btn btn-secondary" onclick="loadSettings()">恢复已保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="common.js"></script>
+<script>
+styleRowTexts = { on: '已启用 · 「题解代码生成」「题解说明生成」将模仿你的风格', none: '尚无风格档案，请先生成' };
+
+const DEFAULT_PROMPT = `你是一位写作风格分析专家。请仔细阅读以下若干篇由同一位作者撰写的算法题解文章，从中提炼出这位作者的个人风格档案。
+
+## 输出要求
+输出一份结构化的 Markdown 风格档案，必须包含以下五个部分：
+
+### 1. 文字风格
+语气（正式/口语化/幽默等）、句式长短习惯、用词偏好、标点与排版习惯、人称使用等。
+
+### 2. 讲解结构
+文章开头方式、思路展开顺序（如是否先暴力解再优化）、复杂度分析的位置与写法、样例推演习惯、图表/列表使用习惯、结尾与小结方式等。
+
+### 3. 代码风格
+变量与函数命名习惯、注释密度与写法、代码结构偏好（如是否拆辅助函数）、惯用的语言特性与写法等。
+
+### 4. 配图风格
+若样本附带图片，请理解图片内容后总结：配图的类型偏好（如手绘示意图、流程图、数据结构图、截图等）、配图在文章中的位置与作用（如辅助理解思路、演示样例推演）、图注与图文的配合方式等。若样本不含图片，本部分写「样本中暂无配图」。
+
+### 4. 标志性表达
+作者反复使用的口头禅、固定句式、标志性段落结构。摘录 3-5 个典型原文例子。
+
+## 注意
+- 档案正文控制在 800 字以内（标志性表达的原文例子除外）
+- 每一条都要具体、可操作，避免「简洁清晰」这类空泛描述，要写出作者区别于他人的具体习惯
+- 这份档案将被直接注入其他 AI 的系统提示词，用于模仿作者风格进行题解与代码创作
+- 仅输出风格档案本身，不要输出分析过程或其他说明`;
+
+/* ===== 全局 API 设置 ===== */
+
+/* ===== 状态与缓存 ===== */
+let samples = [];  // [{name, text, time}]
+
+const MAX_SAMPLES = 20;        // 样本库上限
+const MAX_PER_ANALYZE = 10;    // 单次分析最多取用的篇数
+const PER_SAMPLE_CHARS = 3000; // 每篇参与分析的截取长度
+const MAX_ARTICLE_CHARS = 100000; // 单篇文章导入上限
+const MAX_IMGS_PER_SAMPLE = 9;   // 单篇样本的图片附件上限
+const MAX_IMGS_PER_ANALYZE = 3;  // 分析时每篇最多携带的图片数
+const MAX_IMG_DIM = 1024;        // 图片压缩后的最长边
+const IMG_QUALITY = 0.82;        // JPEG 压缩质量
+
+function saveSamples() {
+  try {
+    localStorage.setItem('style_samples', JSON.stringify(samples));
+  } catch (e) {
+    showToast('样本库超出浏览器存储上限，请删除部分样本或减少图片附件', true);
+  }
+  styleSyncPush();
+}
+
+function init() {
+  $('systemPrompt').value = localStorage.getItem('style_prompt') || DEFAULT_PROMPT;
+  try { samples = JSON.parse(localStorage.getItem('style_samples') || '[]'); } catch (e) { samples = []; }
+  // 旧版本图片没有 id，补上以支持点击缩略图插入正文锚点
+  let migrated = false;
+  samples.forEach(s => (s.imgs || []).forEach(im => { if (!im.id) { im.id = genImgId(); migrated = true; } }));
+  if (migrated) saveSamples();
+  renderSamples();
+  const profile = localStorage.getItem('style_profile') || '';
+  if (profile) showProfile(profile);
+  else updateProfileStats('');
+  refreshStyleRow();
+  updateInputStats();
+}
+persistPromptOnInput('style_prompt');
+
+/* ===== 样本导入与管理 ===== */
+function updateInputStats() {
+  $('inputStats').textContent = $('articleInput').value.length + ' 字符';
+}
+$('articleInput').addEventListener('input', updateInputStats);
+
+// 从文章首行/首个标题推断样本名
+function guessName(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  for (const l of lines.slice(0, 5)) {
+    const t = l.replace(/^#+\s*/, '').trim();
+    if (t && t.length <= 60) return t;
+  }
+  return '未命名文章';
+}
+
+function addSample(text, silent, imgs) {
+  const fromForm = text === undefined;
+  text = (fromForm ? $('articleInput').value : text).trim();
+  if (!text) { if (!silent) showToast('请先粘贴文章内容'); return false; }
+  if (text.length > MAX_ARTICLE_CHARS) {
+    showToast('单篇文章过长（上限 ' + MAX_ARTICLE_CHARS + ' 字符），已自动截断', true);
+    text = text.slice(0, MAX_ARTICLE_CHARS);
+  }
+  if (samples.length >= MAX_SAMPLES) { showToast('样本库已满（上限 ' + MAX_SAMPLES + ' 篇），请先删除部分样本', true); return false; }
+  if (samples.some(s => s.text === text)) { if (!silent) showToast('该文章已在样本库中', true); return false; }
+  // 表单添加优先使用用户填写的标题，文件导入/留空则从文章首行推断
+  const customTitle = fromForm ? $('sampleTitle').value.trim() : '';
+  const rawImgs = (imgs || (fromForm ? pendingImgs : [])).slice(0, MAX_IMGS_PER_SAMPLE);
+  const [sampleImgs, dropped] = filterReferencedImgs(text, rawImgs);
+  samples.push({ name: customTitle || guessName(text), text: text, imgs: sampleImgs, time: Date.now() });
+  saveSamples();
+  renderSamples();
+  if (fromForm) {
+    $('sampleTitle').value = '';
+    $('articleInput').value = '';
+    pendingImgs.length = 0;
+    renderPendingImgs();
+    updateInputStats();
+    showToast('已添加到样本库' + (sampleImgs.length ? '（含 ' + sampleImgs.length + ' 张配图）' : '')
+      + (dropped ? '，' + dropped + ' 张未被正文引用的图片已忽略' : ''));
+  }
+  return true;
+}
+
+function deleteSample(idx) {
+  samples.splice(idx, 1);
+  saveSamples();
+  renderSamples();
+  showToast('已删除该样本');
+}
+
+/* ===== 样本编辑（标题 + 内容） ===== */
+let editingIdx = -1;
+
+function updateEditStats() {
+  $('editStats').textContent = $('editContent').value.length + ' 字符';
+}
+$('editContent').addEventListener('input', updateEditStats);
+
+function openEdit(idx) {
+  const s = samples[idx];
+  if (!s) return;
+  editingIdx = idx;
+  $('editTitle').value = s.name;
+  $('editContent').value = s.text;
+  editImgs.length = 0;
+  editImgs.push.apply(editImgs, s.imgs || []);
+  renderEditImgs();
+  updateEditStats();
+  $('editOverlay').classList.remove('hidden');
+}
+
+function closeEdit() {
+  editingIdx = -1;
+  editImgs.length = 0;
+  $('editOverlay').classList.add('hidden');
+}
+
+function saveEdit() {
+  const s = samples[editingIdx];
+  if (!s) return closeEdit();
+  let text = $('editContent').value.trim();
+  if (!text) { showToast('文章内容不能为空', true); return; }
+  if (text.length > MAX_ARTICLE_CHARS) {
+    showToast('文章过长（上限 ' + MAX_ARTICLE_CHARS + ' 字符），已自动截断', true);
+    text = text.slice(0, MAX_ARTICLE_CHARS);
+  }
+  if (samples.some((o, j) => j !== editingIdx && o.text === text)) {
+    showToast('修改后的内容与库中另一样本重复', true); return;
+  }
+  const contentChanged = text !== s.text;
+  const [keptImgs, droppedImgs] = filterReferencedImgs(text, editImgs.slice(0, MAX_IMGS_PER_SAMPLE));
+  s.name = $('editTitle').value.trim() || guessName(text);
+  s.text = text;
+  s.imgs = keptImgs;
+  s.time = Date.now();
+  saveSamples();
+  renderSamples();
+  closeEdit();
+  showToast((contentChanged ? '样本已更新，建议重新分析生成风格档案' : '样本标题已更新')
+    + (droppedImgs ? '，' + droppedImgs + ' 张未被正文引用的图片已移除' : ''));
+}
+
+/* ===== 图片附件：粘贴插入 / 压缩存储 / 缩略图 / 与文章匹配 ===== */
+let pendingImgs = [];  // 添加表单待附加的图片 [{id, name, data}]
+let editImgs = [];     // 编辑弹窗中的图片
+let imgSeq = 0;
+
+function genImgId() { return 'i' + Date.now().toString(36) + (imgSeq++).toString(36); }
+
+// 压缩图片为 dataURL（最长边 MAX_IMG_DIM，JPEG），控制 localStorage 占用
+function processImageFile(file) {
+  return new Promise((resolve, reject) => {
+    if (!/^image\//.test(file.type)) return reject(new Error('非图片文件'));
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if (Math.max(w, h) > MAX_IMG_DIM) {
+        const k = MAX_IMG_DIM / Math.max(w, h);
+        w = Math.round(w * k); h = Math.round(h * k);
+      }
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve({ id: genImgId(), name: file.name || '粘贴图片.png', data: cv.toDataURL('image/jpeg', IMG_QUALITY) });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('图片读取失败')); };
+    img.src = url;
+  });
+}
+
+// 在 textarea 光标处插入文本
+function insertAtCursor(ta, text) {
+  const start = ta.selectionStart != null ? ta.selectionStart : ta.value.length;
+  const end = ta.selectionEnd != null ? ta.selectionEnd : ta.value.length;
+  ta.value = ta.value.slice(0, start) + text + ta.value.slice(end);
+  const pos = start + text.length;
+  ta.selectionStart = ta.selectionEnd = pos;
+  ta.dispatchEvent(new Event('input'));
+}
+
+// 图片在正文中的锚点标记：![配图N](img://ID)
+function imgMarker(ta, im) {
+  const n = (ta.value.match(/!\[[^\]]*\]\(img:\/\/\w+\)/g) || []).length + 1;
+  return '\n![配图' + n + '](img://' + im.id + ')\n';
+}
+
+// 添加图片：压缩入库 + 在光标处插入锚点标记
+async function addImageFiles(files, arr, ta, renderFn) {
+  let fail = 0;
+  for (const f of files) {
+    if (arr.length >= MAX_IMGS_PER_SAMPLE) { fail++; continue; }
+    try {
+      const im = await processImageFile(f);
+      arr.push(im);
+      insertAtCursor(ta, imgMarker(ta, im));
+    } catch (err) { fail++; }
+  }
+  renderFn();
+  if (fail) showToast(fail + ' 张图片未添加（超出上限或读取失败）', true);
+}
+
+// 渲染缩略图条；点击图片把锚点插入光标处，点 × 删除图片及其正文锚点
+function renderThumbs(el, arr, ta, renderFn) {
+  el.innerHTML = '';
+  arr.forEach((im, i) => {
+    const t = document.createElement('div');
+    t.className = 'thumb';
+    t.title = im.name + '（点击插入到正文光标处）';
+    const pic = document.createElement('img');
+    pic.src = im.data;
+    pic.style.cursor = 'pointer';
+    pic.onclick = () => { if (ta) insertAtCursor(ta, imgMarker(ta, im)); };
+    const del = document.createElement('button');
+    del.className = 'thumb-del';
+    del.textContent = '×';
+    del.title = '删除图片及其正文标记';
+    del.onclick = () => {
+      arr.splice(i, 1);
+      if (ta) ta.value = ta.value.replace(new RegExp('\\n?!\\[[^\\]]*\\]\\(img://' + im.id + '\\)\\n?', 'g'), '');
+      renderFn();
+    };
+    t.appendChild(pic);
+    t.appendChild(del);
+    el.appendChild(t);
+  });
+}
+
+function renderPendingImgs() {
+  renderThumbs($('pendingImgs'), pendingImgs, $('articleInput'), renderPendingImgs);
+}
+function renderEditImgs() {
+  renderThumbs($('editImgs'), editImgs, $('editContent'), renderEditImgs);
+}
+
+// 支持直接 Ctrl+V 粘贴图片到正文光标位置
+function attachPasteImage(ta, arr, renderFn) {
+  ta.addEventListener('paste', (e) => {
+    const items = Array.from((e.clipboardData || {}).items || []);
+    const files = items.filter(it => it.type.indexOf('image/') === 0).map(it => it.getAsFile()).filter(Boolean);
+    if (!files.length) return;
+    e.preventDefault();
+    addImageFiles(files, arr, ta, renderFn);
+    showToast('已插入 ' + files.length + ' 张图片到光标位置');
+  });
+}
+attachPasteImage($('articleInput'), pendingImgs, renderPendingImgs);
+attachPasteImage($('editContent'), editImgs, renderEditImgs);
+
+// 添加表单：选择图片（同样插入到正文光标处）
+$('imgInput').addEventListener('change', async (e) => {
+  const files = Array.from(e.target.files || []);
+  e.target.value = '';
+  await addImageFiles(files, pendingImgs, $('articleInput'), renderPendingImgs);
+});
+
+// 编辑弹窗：选择图片（插入到正文光标处）
+$('editImgInput').addEventListener('change', async (e) => {
+  const files = Array.from(e.target.files || []);
+  e.target.value = '';
+  await addImageFiles(files, editImgs, $('editContent'), renderEditImgs);
+});
+
+// 只保留正文中被引用的图片（按 img://ID 锚点或原始文件名匹配），返回 [保留, 剔除数]
+function filterReferencedImgs(text, imgs) {
+  const kept = imgs.filter(im =>
+    text.indexOf('img://' + im.id) !== -1
+    || (im.name && extractImageRefs(text).indexOf(im.name) !== -1));
+  return [kept, imgs.length - kept.length];
+}
+
+// 从 Markdown 正文中提取相对路径图片引用的文件名（用于批量导入时匹配）
+function extractImageRefs(text) {
+  const refs = [];
+  const re = /!\[[^\]]*\]\(\s*([^)\s]+?)\s*\)/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const p = m[1];
+    if (/^https?:\/\//i.test(p) || /^data:/i.test(p)) continue; // 网络图不抓取
+    if (p.indexOf('img://') === 0) continue; // 内部锚点单独处理
+    const base = p.split('/').pop();
+    if (base) refs.push(base);
+  }
+  return refs;
+}
+
+function renderSamples() {
+  const wrap = $('sampleList');
+  wrap.innerHTML = '';
+  if (!samples.length) {
+    wrap.innerHTML = '<div class="sample-empty">样本库为空。建议导入 3 篇以上你过往的题解文章，风格分析会更准确。</div>';
+  } else {
+    samples.forEach((s, i) => {
+      const item = document.createElement('div');
+      item.className = 'sample-item';
+      const name = document.createElement('span');
+      name.className = 'sample-name';
+      name.textContent = (i + 1) + '. ' + s.name;
+      name.title = s.name;
+      const meta = document.createElement('span');
+      meta.className = 'sample-meta';
+      meta.textContent = s.text.length + ' 字符' + ((s.imgs && s.imgs.length) ? ' · ' + s.imgs.length + ' 图' : '');
+      const edit = document.createElement('button');
+      edit.className = 'sample-edit';
+      edit.textContent = '编辑';
+      edit.onclick = () => openEdit(i);
+      const del = document.createElement('button');
+      del.className = 'sample-del';
+      del.textContent = '删除';
+      del.onclick = () => deleteSample(i);
+      item.appendChild(name);
+      item.appendChild(meta);
+      item.appendChild(edit);
+      item.appendChild(del);
+      wrap.appendChild(item);
+    });
+  }
+  const total = samples.reduce((a, s) => a + s.text.length, 0);
+  $('sampleStats').textContent = '共 ' + samples.length + ' 篇 · ' + total + ' 字符';
+}
+
+// 文件导入（.md/.txt 与图片可混选；图片按 Markdown 引用文件名自动匹配到文章）
+$('fileInput').addEventListener('change', async (e) => {
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+  const texts = files.filter(f => /\.(md|txt)$/i.test(f.name) || /^text\//.test(f.type));
+  const images = files.filter(f => /^image\//.test(f.type));
+  // 先把图片压缩成 {文件名: img}，供文章引用匹配
+  const imgPool = new Map();
+  let imgFail = 0;
+  for (const f of images) {
+    try { imgPool.set(f.name, await processImageFile(f)); }
+    catch (err) { imgFail++; }
+  }
+  let ok = 0, fail = 0, matched = 0;
+  const usedNames = new Set();
+  for (const f of texts) {
+    try {
+      const text = await f.text();
+      const refs = extractImageRefs(text);
+      const imgs = [];
+      for (const base of refs) {
+        if (imgPool.has(base) && !usedNames.has(base) && imgs.length < MAX_IMGS_PER_SAMPLE) {
+          imgs.push(imgPool.get(base));
+          usedNames.add(base);
+          matched++;
+        }
+      }
+      if (addSample(text, true, imgs)) ok++; else fail++;
+    } catch (err) { fail++; }
+  }
+  const unmatched = images.length - usedNames.size - imgFail;
+  e.target.value = '';
+  let msg = '';
+  if (ok) {
+    msg = '成功导入 ' + ok + ' 篇文章' + (matched ? '，匹配 ' + matched + ' 张配图' : '');
+    if (fail) msg += '，' + fail + ' 篇未导入（重复或超限）';
+    showToast(msg);
+  } else if (texts.length) {
+    showToast('未能导入：文章重复或超出上限', true);
+  }
+  if (unmatched > 0) showToast(unmatched + ' 张图片未被任何文章引用，已跳过——可在样本「编辑」中手动添加', true);
+});
+
+/* ===== Markdown 渲染（与其他页面一致） ===== */
+
+/* ===== 风格档案：展示 / 编辑 / 保存 ===== */
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  if (tab === 'rendered') {
+    // 从源码编辑切回预览时同步一次
+    const edited = $('profileSource').value;
+    if (edited !== (localStorage.getItem('style_profile') || '')) showProfile(edited);
+    $('renderedOutput').classList.remove('hidden');
+    $('profileSource').classList.add('hidden');
+  } else {
+    $('profileSource').value = localStorage.getItem('style_profile') || '';
+    $('renderedOutput').classList.add('hidden');
+    $('profileSource').classList.remove('hidden');
+  }
+}
+
+function showProfile(md) {
+  $('profileSource').value = md;
+  $('renderedOutput').innerHTML = renderMarkdown(md);
+  updateProfileStats(md);
+}
+
+function updateProfileStats(md) {
+  $('profileStats').textContent = '档案 ' + (md || '').length + ' 字符';
+}
+
+function saveProfile() {
+  const md = $('profileSource').value.trim();
+  if (!md) { showToast('档案内容为空'); return; }
+  localStorage.setItem('style_profile', md);
+  styleSyncPush();
+  showProfile(md);
+  refreshStyleRow();
+  showToast('风格档案已保存，将在创作页生效');
+}
+
+function copyProfile() {
+  const md = localStorage.getItem('style_profile') || '';
+  if (!md) { showToast('没有内容可复制'); return; }
+  copyText(md, '已复制到剪贴板');
+}
+
+/* ===== 风格启用开关（全局，作用于题解代码生成与题解说明生成页） ===== */
+
+/* ===== 风格分析 ===== */
+async function analyzeStyle() {
+  if (!samples.length) { showToast('样本库为空，请先导入题解文章'); return; }
+
+  const btn = $('analyzeBtn');
+  const btnText = $('analyzeBtnText');
+  btn.disabled = true;
+  btnText.innerHTML = '<span class="loading"></span> 分析中...';
+
+  try {
+    // 样本过多时均匀抽样，控制请求体量
+    let used = samples;
+    if (samples.length > MAX_PER_ANALYZE) {
+      const step = samples.length / MAX_PER_ANALYZE;
+      used = [];
+      for (let i = 0; i < MAX_PER_ANALYZE; i++) used.push(samples[Math.floor(i * step)]);
+    }
+    // 把每篇文章切成「文字 + 配图」交错的片段，保留图片在正文中的具体位置
+    const perArticle = used.map(s => {
+      const text = s.text.slice(0, PER_SAMPLE_CHARS);
+      const imgs = s.imgs || [];
+      const segs = [];
+      const imgUsed = new Set();
+      const re = /!\[[^\]]*\]\(\s*([^)\s]+?)\s*\)/g;
+      let last = 0, m, sent = 0;
+      while ((m = re.exec(text)) !== null) {
+        const src = m[1];
+        let im = null;
+        if (src.indexOf('img://') === 0) im = imgs.find(x => 'img://' + x.id === src);
+        else if (!/^https?:\/\//i.test(src) && !/^data:/i.test(src)) {
+          const base = src.split('/').pop();
+          im = imgs.find(x => x.name === base);
+        }
+        if (im && !imgUsed.has(im.id || im.name) && sent < MAX_IMGS_PER_ANALYZE) {
+          const before = text.slice(last, m.index).trim();
+          if (before) segs.push({ type: 'text', text: before });
+          segs.push({ type: 'image_url', image_url: { url: im.data } });
+          segs.push({ type: 'text', text: '（上图为本文此处的配图）' });
+          imgUsed.add(im.id || im.name); sent++;
+          last = m.index + m[0].length;
+        }
+      }
+      const rest = text.slice(last).trim();
+      if (rest || !segs.length) segs.push({ type: 'text', text: rest || text.trim() });
+      return segs;
+    });
+    const imgTotal = perArticle.reduce((a, segs) => a + segs.filter(g => g.type === 'image_url').length, 0);
+    const intro = '以下是我的 ' + used.length + ' 篇题解文章'
+      + (samples.length > used.length ? '（样本库共 ' + samples.length + ' 篇，已均匀抽取 ' + used.length + ' 篇）' : '')
+      + (imgTotal ? '，共含 ' + imgTotal + ' 张配图（已穿插在正文对应位置，请一并理解配图内容与风格）' : '')
+      + '，请按系统提示词要求提炼我的个人风格档案：';
+    const userContent = intro + '\n\n' + used.map((s, i) =>
+      '【第 ' + (i + 1) + ' 篇：' + s.name + '】\n' + s.text.slice(0, PER_SAMPLE_CHARS)
+    ).join('\n\n');
+
+    // 组装多模态请求体：配图按正文位置交错排列
+    const parts = [{ type: 'text', text: intro }];
+    used.forEach((s, i) => {
+      parts.push({ type: 'text', text: '\n【第 ' + (i + 1) + ' 篇：' + s.name + '】' });
+      perArticle[i].forEach(seg => parts.push(seg));
+    });
+
+    // 走公共请求模块 postChatCompletion：自动携带"关闭思考"参数（kimi-k2.6 思考模式
+    // 只允许 temperature=1，不带该参数会与设置中的 0.6 冲突报 400），并获得网络重试能力
+    const apiCfg = getApiConfig();
+    const buildMessages = (userPayload) => [
+      { role: 'system', content: $('systemPrompt').value },
+      { role: 'user', content: userPayload }
+    ];
+
+    // 先尝试携带图片；若接口/模型不支持视觉输入，自动降级为纯文字重试
+    let fellBack = false, data;
+    try {
+      data = await postChatCompletion(apiCfg, buildMessages(imgTotal > 0 ? parts : userContent), { maxTokens: 4096 });
+    } catch (e) {
+      if (imgTotal === 0) throw e;
+      console.error('多模态请求失败，降级纯文字重试:', e);
+      data = await postChatCompletion(apiCfg, buildMessages(userContent), { maxTokens: 4096 });
+      fellBack = true;
+    }
+    const choice = data.choices && data.choices[0];
+    if (!choice || !choice.message || typeof choice.message.content !== 'string' || !choice.message.content.trim()) {
+      throw new Error('模型未返回有效内容，请重试');
+    }
+    const profile = choice.message.content.trim();
+    localStorage.setItem('style_profile', profile);
+    styleSyncPush();
+    showProfile(profile);
+    refreshStyleRow();
+    // 切到预览 tab
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelector('.tab').classList.add('active');
+    $('renderedOutput').classList.remove('hidden');
+    $('profileSource').classList.add('hidden');
+    showToast('风格档案已生成' + (localStorage.getItem('style_enabled') === '1' ? '，创作页将自动模仿你的风格' : '，勾选下方开关即可在创作页启用'));
+    if (fellBack) setTimeout(() => showToast('当前模型不支持图片理解，本次已仅基于文字内容分析', true), 2800);
+  } catch (e) {
+    showToast('错误: ' + e.message, true);
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btnText.textContent = '分析样本并生成风格档案';
+  }
+}
+
+/* ===== 清空本页全部缓存 ===== */
+function clearAllCache() {
+  const hasData = samples.length || (localStorage.getItem('style_profile') || '').trim()
+    || $('articleInput').value.trim();
+  if (hasData && !confirm('确定要清空全部缓存吗？\n将删除样本库中的全部文章和已生成的风格档案，此操作不可恢复。')) return;
+  samples = [];
+  ['style_samples', 'style_profile', 'style_enabled', 'style_prompt']
+    .forEach(k => localStorage.removeItem(k));
+  styleSyncPush();
+  $('articleInput').value = '';
+  $('sampleTitle').value = '';
+  pendingImgs.length = 0;
+  renderPendingImgs();
+  closeEdit();
+  $('systemPrompt').value = DEFAULT_PROMPT;
+  renderSamples();
+  $('renderedOutput').innerHTML = '<div class="empty-state">'
+    + '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>'
+    + '<div class="empty-title">风格档案将显示在这里</div>'
+    + '<div class="empty-hint">先在上方导入若干篇题解文章，再点击「分析样本并生成风格档案」</div></div>';
+  $('profileSource').value = '';
+  updateProfileStats('');
+  refreshStyleRow();
+  updateInputStats();
+  showToast('缓存已清空，创作页将不再注入风格档案');
+}
+
+/* ===== Toast ===== */
+
+// 服务器数据拉取完成后刷新界面（服务器为权威数据源，覆盖本地缓存）
+window.addEventListener('style-synced', () => init());
+
+init();
+</script>
+</body>
+</html>
